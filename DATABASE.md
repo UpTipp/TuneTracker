@@ -19,6 +19,7 @@ sign in system.
 - email (NN): a email for the user, gotten from their google login
 - firstName (NN): first name of the user, gotten from their google login
 - lastName (NN): last name of the user, gotten from their google login
+- picture (NN): reference to picture of the user
 - tuneStates: array of objects storing each tunes' state for the user
 
   - tuneId (NN)

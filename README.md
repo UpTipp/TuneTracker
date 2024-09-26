@@ -1,46 +1,25 @@
-# Getting Started with Create React App
+# Tune Tracker
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This web application aims to fix a problem that the author faces,
+they are unable to collect and remeber all the tunes they have
+learned over the last decade of playing music.
 
-## Available Scripts
+Due to the personal nature of the web application it is currently
+built around the needs of the creator. Therefore it uses terminology
+from Irish Traditional Music and is limited when it comes to sheet
+music and focues on audio and links to audio (due to the author's
+lack of ability to read sheet music)!
 
-In the project directory, you can run:
+If you wish for any features to be added please add it to the GitHub,
+however chances are that the author will take some time to add them
+as at the end of the day this is still a personal project.
 
-### `npm start`
+## Login System
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+The login and accounts system uses Google Services (and accounts) to
+authenticate the user. This is just due to ease of letting Google due
+the hard work of confirming users. This website specifically uses
+passport, influenced by:
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+- <https://www.passportjs.org/packages/passport-google-oauth20/>
+- <https://medium.com/@prashantramnyc/how-to-implement-google-authentication-in-node-js-using-passport-js-9873f244b55e>
