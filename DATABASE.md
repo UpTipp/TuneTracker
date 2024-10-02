@@ -85,4 +85,5 @@ Sessions hold sets and tunes, and are created by users.
 - setIds (FK, NN): array of setIds referencing different sets
 - recordingRef: array reference to the recording for the tune
   (stored in a folder on the server)
+- links: array of links appropraite for the tune
 - comments: allows user to write feelings/ideas
