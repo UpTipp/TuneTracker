@@ -6,6 +6,9 @@
 
 /* Database Models */
 import User from './models/User';
+import Tune from './models/Tune';
+import Set from './models/Set';
+import Session from './models/Session';
 
 /*  Important Modules!  */
 import dotenv from 'dotenv';
@@ -18,6 +21,8 @@ import session from 'express-session';
 import passport from 'passport';
 import { Strategy as GoogleStrategy} from 'passport-google-oauth2';
 import crypto from 'crypto';
+import multer from 'multer';
+import fs from 'fs';
 
 dotenv.config();  // Initialize dotenv
 
@@ -39,7 +44,7 @@ const sessionStore = MongoStore.create({
 /* Setting Server Up */
 
 // Initialize Express app
-const app = express();  
+const app = express();
 const port: string = process.env.PORT!;
 const secret: string = process.env.SESSION_SECRET!;
 
@@ -63,6 +68,9 @@ app.use(cors());
 
 // Serve static files from the 'build' directory
 app.use('/', express.static(path.join(__dirname, './build')));
+app.use('/uploads/tunes', express.static(path.join(__dirname, 'uploads', 'tunes')));
+app.use('/uploads/sets', express.static(path.join(__dirname, 'uploads', 'sets')));
+app.use('/uploads/sessions', express.static(path.join(__dirname, 'uploads', 'sessions')));
 
 // Google Passport Continued
 const GOOGLE_CLIENT_ID: string = process.env.GOOGLE_CLIENT_ID!;
@@ -80,17 +88,6 @@ interface GoogleProfile {
   photos: { value: string; type?: string }[];
   // Add other fields as necessary
 }
-
-const authUser = (
-  request: Request,
-  accessToken: string,
-  refreshToken: string,
-  profile: GoogleProfile,
-  done: (error: any, user?: any) => void
-) => {
-  return done(null, profile);
-};
-
 
 //Use "GoogleStrategy" as the Authentication Strategy
 passport.use(new GoogleStrategy({
@@ -124,6 +121,10 @@ passport.use(new GoogleStrategy({
       await user.save(); // Save new user to the database
     }
 
+    // Session Setting
+    request.session.userId = user.userId;
+    request.session.email = user.email;
+
     // Pass the user object to the next middleware
     return done(null, user);  // Ensure done is passed the correct parameters
   } catch (error) {
@@ -146,6 +147,82 @@ passport.deserializeUser(async (user: Express.User, done: (err: any, user?: any)
   }
 });
 
+/*  Middleware for files specifically recordings  */
+const storageTune = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const tuneId = req.body.tuneId || crypto.randomBytes(16).toString("hex");
+    const dir = path.join(__dirname, 'uploads', 'tunes', tuneId); // Directory for tune's recordings
+
+    // Ensure directory exists or create it
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    cb(null, dir); // Set directory as the destination
+  },
+  filename: function (req, file, cb) {
+    // Find the next sequential number for the file
+    const tuneId = req.body.tuneId;
+    const dir = path.join(__dirname, 'uploads', 'tunes', tuneId);
+    const files = fs.readdirSync(dir);
+    const nextIndex = files.length + 1; // Increment based on current files in the directory
+    const ext = path.extname('.mp3'); // Make it mp3
+    cb(null, `${nextIndex}${ext}`); // Name files sequentially
+  }
+});
+
+const storageSet = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const setId = req.body.setId || crypto.randomBytes(16).toString('hex');
+    const dir = path.join(__dirname, 'uploads', 'sets', setId);
+
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    // Attach setId to req.body for later use
+    req.body.setId = setId;
+
+    cb(null, dir);
+  },
+  filename: function (req, file, cb) {
+    const dir = path.join(__dirname, 'uploads', 'sets', req.body.setId);
+    const files = fs.existsSync(dir) ? fs.readdirSync(dir) : [];
+    const nextIndex = files.length + 1;
+    const ext = path.extname('.mp3'); // Assuming recordings are .mp3
+    cb(null, `${nextIndex}${ext}`);
+  },
+});
+
+const storageSession = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const sessionId = req.body.sessionId || crypto.randomBytes(16).toString('hex');
+    const dir = path.join(__dirname, 'uploads', 'sessions', sessionId);
+
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    // Attach sessionId to req.body for later use
+    req.body.sessionId = sessionId;
+
+    cb(null, dir);
+  },
+  filename: function (req, file, cb) {
+    const dir = path.join(__dirname, 'uploads', 'sessions', req.body.sessionId);
+    const files = fs.existsSync(dir) ? fs.readdirSync(dir) : [];
+    const nextIndex = files.length + 1;
+    const ext = path.extname('.mp3'); // Assuming recordings are .mp3
+    cb(null, `${nextIndex}${ext}`);
+  },
+});
+
+// Multer upload config (limit file size to 100MB, adjust if necessary)
+const uploadTune = multer({ storage: storageTune, limits: { fileSize: 100 * 1024 * 1024 } });
+const uploadSet = multer({ storage: storageSet, limits: { fileSize: 100 * 1024 * 1024 } });
+const uploadSession = multer({ storage: storageSession, limits: { fileSize: 100 * 1024 * 1024 } });
+
+
 /*  Starting and Killing Server  */
 app.listen(port, () => {
   console.log(`Server is running at http://localhost:${port}`);
@@ -164,10 +241,9 @@ app.get('/auth/google',
     [ 'email', 'profile' ] }
 ));
 
-app.get('/auth/google/callback',
-  passport.authenticate( 'google', {
-    successRedirect: '/',
-    failureRedirect: '/login'
+app.get('/auth/google/callback', passport.authenticate( 'google', {
+  failureRedirect: '/login', 
+  successRedirect: '/'
 }));
 
 // Logout Route
@@ -204,8 +280,508 @@ app.get('/logout', (req, res) => {
   });
 });
 
+// Tunes
+
+// Posting Tunes
+app.post('/api/tune', uploadTune.array('recordings'), async (req, res) => {
+  if (!req.session || !req.session.userId) {
+    return res.status(403).send('Not Logged In!');
+  }
+
+  const { tuneName, tuneType, author, links, comments } = req.body;
+
+  if (!tuneName || !tuneType) {
+    return res.status(400).send('Missing required fields: tuneName or tuneType');
+  }
+
+  try {
+    // Generate a unique tuneId
+    let tuneId = crypto.randomBytes(16).toString("hex");
+    while (await Tune.findOne({ tuneId })) {
+      tuneId = crypto.randomBytes(16).toString("hex");
+    }
+
+    // Ensure req.files is treated as an array
+    const files = req.files as Express.Multer.File[];
+
+    // Create an array of uploaded file paths (recording references)
+    const recordingRefs = files ? files.map((file: Express.Multer.File) => file.path) : [];
+
+    const newTune = new Tune({
+      tuneId,
+      userId: req.session.userId, // User ID from session
+      tuneName,
+      tuneType,
+      author,
+      recordingRef: recordingRefs, // Store the file paths
+      links,
+      comments
+    });
+
+    await newTune.save();
+    return res.status(201).json({ message: 'Tune created successfully', tune: newTune });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send('Error creating tune');
+  }
+});
 
 
+// Getting a Specific Tune
+app.get('/api/tune/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Find the tune by its ID
+    const tune = await Tune.findOne({ tuneId: id });
+
+    // If no tune is found, return a 404 error
+    if (!tune) {
+      return res.status(404).send('Tune not found');
+    }
+
+    // Path to the recordings folder
+    const recordingsDir = path.join(__dirname, 'uploads/tunes', tune.tuneId);
+
+    // Check if the recordings folder exists
+    let recordings: string[] = [];
+    if (fs.existsSync(recordingsDir)) {
+      // Read the filenames of the recordings
+      recordings = fs.readdirSync(recordingsDir)
+        .filter(file => file.endsWith('.mp3')) // Only return .mp3 files
+        .map(file => path.join('/uploads/tunes', tune.tuneId, file)); // Return relative URLs or paths
+    }
+
+    // Attach the recordings to the tune object
+    const tuneData = {
+      ...tune.toObject(), // Convert Mongoose document to plain object
+      recordings
+    };
+
+    // Return the tune data along with the recordings
+    return res.status(200).json(tuneData);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send('Error retrieving tune');
+  }
+});
+
+
+// Updating a Specific Tune
+app.put('/api/tune/:id', uploadTune.array('recordings'), async (req, res) => {
+  const { id } = req.params;
+  const { recordingActions } = req.body; // Expect an array of actions for the existing recordings
+
+  try {
+    const tune = await Tune.findById(id);
+    if (!tune) {
+      return res.status(404).send('No Tune Found!');
+    }
+
+    if (req.session && (tune.userId !== req.session.userId && !req.session.isAdmin)) {
+      return res.status(403).send('Not authorized to update this tune!');
+    }
+
+    const recordingsDir = path.join(__dirname, 'recordings', tune.tuneId);
+    const existingRecordings = tune.recordingRef || [];
+
+    // Ensure req.files is treated as an array
+    const newFiles = req.files as Express.Multer.File[];
+    let updatedRecordings: string[] = [];
+
+    // Process the actions for existing files
+    recordingActions.forEach((action: string, index: number) => {
+      const existingFile = existingRecordings[index];
+      const filePath = path.join(recordingsDir, existingFile);
+
+      if (action === 'delete' && fs.existsSync(filePath)) {
+        // Delete the file
+        fs.unlinkSync(filePath);
+      } else if (action === 'keep') {
+        // Keep the file (renamed later)
+        updatedRecordings.push(existingFile);
+      }
+    });
+
+    // Rename existing files to follow sequential numbering (1.mp3, 2.mp3, etc.)
+    updatedRecordings = updatedRecordings.map((file, idx) => {
+      const newFileName = `${idx + 1}.mp3`;
+      const oldFilePath = path.join(recordingsDir, file);
+      const newFilePath = path.join(recordingsDir, newFileName);
+
+      if (file !== newFileName && fs.existsSync(oldFilePath)) {
+        fs.renameSync(oldFilePath, newFilePath); // Rename the file
+      }
+
+      return newFileName;
+    });
+
+    // Append new recordings and give them sequential names
+    newFiles.forEach((file, idx) => {
+      const newFileName = `${updatedRecordings.length + idx + 1}.mp3`;
+      const newFilePath = path.join(recordingsDir, newFileName);
+
+      // Move the uploaded file to the correct directory with the correct name
+      fs.renameSync(file.path, newFilePath);
+      updatedRecordings.push(newFileName);
+    });
+
+    // Update the tune with the new list of recordings
+    tune.recordingRef = updatedRecordings;
+
+    // Update other fields
+    tune.tuneName = req.body.tuneName || tune.tuneName;
+    tune.tuneType = req.body.tuneType || tune.tuneType;
+    tune.links = req.body.links || tune.links;
+    tune.comments = req.body.comments || tune.comments;
+
+    await tune.save();
+    return res.status(200).json(tune);
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send('Error updating tune');
+  }
+});
+
+// Deleting a Specific Tune
+// app.delete('/api/tune/:id', async (req, res) => {
+//   const { id } = req.params;
+
+//   try {
+//     const tune = await Tune.findById(id);
+//     if (!tune) {
+//       return res.status(404).send('No Tune Found!');
+//     }
+
+//     if (req.session && (tune.userId !== req.session.userId && !req.session.isAdmin)) {
+//       return res.status(403).send('Not authorized to delete this tune!');
+//     }
+
+//     // Path to the recordings folder
+//     const recordingsDir = path.join(__dirname, 'uploads/tunes', tune.tuneId);
+
+//     // Delete all the recordings in the directory
+//     if (fs.existsSync(recordingsDir)) {
+//       fs.readdirSync(recordingsDir).forEach(file => {
+//         fs.unlinkSync(path.join(recordingsDir, file));
+//       });
+
+//       fs.rmdirSync(recordingsDir); // Remove the directory
+//     }
+
+//     await Tune.deleteOne({ _id: id }); // Delete the tune from the database
+
+//     return res.status(200).send('Tune deleted successfully');
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).send('Error deleting tune');
+//   }
+// });
+
+// Sets
+
+// Posting Sets
+app.post('/api/set', uploadSet.array('recordings'), async (req, res) => {
+  if (!req.session || !req.session.userId) {
+    return res.status(403).send('Not Logged In!');
+  }
+
+  const { setName, tuneIds, comments } = req.body;
+
+  if (!setName || !tuneIds) {
+    return res.status(400).send('Missing required fields: setName or tuneIds');
+  }
+
+  try {
+    const setId = req.body.setId;
+
+    // Ensure req.files is treated as an array
+    const files = req.files as Express.Multer.File[];
+    const recordingRefs = files ? files.map((file) => file.path) : [];
+
+    const newSet = new Set({
+      setId,
+      userId: req.session.userId,
+      setName,
+      tuneIds: JSON.parse(tuneIds), // Assuming tuneIds is a JSON stringified array
+      recordingRef: recordingRefs,
+      comments,
+    });
+
+    await newSet.save();
+    return res.status(201).json({ message: 'Set created successfully', set: newSet });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send('Error creating set');
+  }
+});
+
+// Getting a specific Set
+app.get('/api/set/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const set = await Set.findOne({ setId: id }).populate('tuneIds');
+
+    if (!set) {
+      return res.status(404).send('Set not found');
+    }
+
+    const recordingsDir = path.join(__dirname, 'uploads', 'sets', set.setId);
+
+    let recordings: string[] = [];
+    if (fs.existsSync(recordingsDir)) {
+      recordings = fs.readdirSync(recordingsDir)
+        .filter((file) => file.endsWith('.mp3'))
+        .map((file) => path.join('/uploads/sets', set.setId, file));
+    }
+
+    const setData = {
+      ...set.toObject(),
+      recordings,
+    };
+
+    return res.status(200).json(setData);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send('Error retrieving set');
+  }
+});
+
+// Updating a Set
+app.put('/api/set/:id', uploadSet.array('recordings'), async (req, res) => {
+  const { id } = req.params;
+  const { recordingActions } = req.body; // Expecting an array of actions like ['keep', 'delete', ...]
+
+  try {
+    const set = await Set.findOne({ setId: id });
+    if (!set) {
+      return res.status(404).send('Set not found');
+    }
+
+    // Authorization Check
+    if (req.session && (set.userId !== req.session.userId && !req.session.isAdmin)) {
+      return res.status(403).send('Not authorized to update this set!');
+    }
+
+    const recordingsDir = path.join(__dirname, 'uploads', 'sets', set.setId);
+    const existingRecordings = set.recordingRef || [];
+
+    // Ensure req.files is treated as an array
+    const newFiles = req.files as Express.Multer.File[];
+    let updatedRecordings: string[] = [];
+
+    // Process the actions for existing recordings
+    if (Array.isArray(recordingActions)) {
+      recordingActions.forEach((action: string, index: number) => {
+        const existingFile = existingRecordings[index];
+        if (!existingFile) {
+          return; // Skip if no corresponding file
+        }
+        const filePath = path.join(recordingsDir, path.basename(existingFile));
+
+        switch (action) {
+          case 'delete':
+            if (fs.existsSync(filePath)) {
+              fs.unlinkSync(filePath); // Delete the file
+              console.log(`Deleted file: ${filePath}`);
+            }
+            break;
+          case 'keep':
+            updatedRecordings.push(existingFile); // Keep the file
+            break;
+          default:
+            // Handle other actions if necessary
+            break;
+        }
+      });
+    } else {
+      return res.status(400).send('Invalid recordingActions format. Expected an array.');
+    }
+
+    // Rename existing kept files to follow sequential numbering (1.mp3, 2.mp3, etc.)
+    updatedRecordings = updatedRecordings.map((file, idx) => {
+      const newFileName = `${idx + 1}${path.extname(file)}`;
+      const oldFilePath = path.join(recordingsDir, path.basename(file));
+      const newFilePath = path.join(recordingsDir, newFileName);
+
+      if (path.basename(file) !== newFileName && fs.existsSync(oldFilePath)) {
+        fs.renameSync(oldFilePath, newFilePath); // Rename the file
+        console.log(`Renamed file from ${oldFilePath} to ${newFilePath}`);
+      }
+
+      return `/uploads/sets/${set.setId}/${newFileName}`;
+    });
+
+    // Append new recordings and name them sequentially
+    if (newFiles && newFiles.length > 0) {
+      newFiles.forEach((file, idx) => {
+        const newIndex = updatedRecordings.length + idx + 1;
+        const newFileName = `${newIndex}${path.extname(file.originalname)}`;
+        const newFilePath = path.join(recordingsDir, newFileName);
+
+        fs.renameSync(file.path, newFilePath); // Move and rename the file
+        console.log(`Uploaded new file to ${newFilePath}`);
+
+        updatedRecordings.push(`/uploads/sets/${set.setId}/${newFileName}`);
+      });
+    }
+
+    // Update the Set document
+    set.recordingRef = updatedRecordings;
+
+    // Update other fields if provided
+    const { setName, tuneIds, comments, links } = req.body;
+    if (setName) set.setName = setName;
+    if (tuneIds) set.tuneIds = JSON.parse(tuneIds); // Assuming tuneIds is a JSON stringified array
+    if (comments) set.comments = comments;
+    if (links) set.links = JSON.parse(links); // Assuming links is a JSON stringified array
+
+    await set.save();
+
+    return res.status(200).json({ message: 'Set updated successfully', set });
+  } catch (error) {
+    console.error('Error updating set:', error);
+    return res.status(500).send('Error updating set');
+  }
+});
+
+// Deleting a Set
+app.delete('/api/set/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const set = await Set.findOne({ setId: id });
+    if (!set) {
+      return res.status(404).send('Set not found');
+    }
+
+    if (req.session && (set.userId !== req.session.userId && !req.session.isAdmin)) {
+      return res.status(403).send('Not authorized to delete this set!');
+    }
+
+    const recordingsDir = path.join(__dirname, 'uploads', 'sets', set.setId);
+    if (fs.existsSync(recordingsDir)) {
+      fs.readdirSync(recordingsDir).forEach((file) => {
+        fs.unlinkSync(path.join(recordingsDir, file));
+      });
+      fs.rmdirSync(recordingsDir);
+    }
+
+    await Set.deleteOne({ setId: id });
+
+    return res.status(200).send('Set deleted successfully');
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send('Error deleting set');
+  }
+});
+
+
+// Session
+
+// Posting a Session
+app.post('/api/session', uploadSession.array('recordings'), async (req, res) => {
+  if (!req.session || !req.session.userId) {
+    return res.status(403).send('Not Logged In!');
+  }
+
+  const { sessionName, tuneIds, setIds, comments } = req.body;
+
+  if (!sessionName) {
+    return res.status(400).send('Missing required field: sessionName');
+  }
+
+  try {
+    const sessionId = req.body.sessionId;
+
+    // Ensure req.files is treated as an array
+    const files = req.files as Express.Multer.File[];
+    const recordingRefs = files ? files.map((file) => file.path) : [];
+
+    const newSession = new Session({
+      sessionId,
+      userId: req.session.userId,
+      sessionName,
+      tuneIds: JSON.parse(tuneIds || '[]'), // Assuming tuneIds is a JSON stringified array
+      setIds: JSON.parse(setIds || '[]'),   // Assuming setIds is a JSON stringified array
+      recordingRef: recordingRefs,
+      comments,
+    });
+
+    await newSession.save();
+    return res.status(201).json({ message: 'Session created successfully', session: newSession });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send('Error creating session');
+  }
+});
+
+// Getting a Session
+app.get('/api/session/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const session = await Session.findOne({ sessionId: id })
+      .populate('tuneIds')
+      .populate('setIds');
+
+    if (!session) {
+      return res.status(404).send('Session not found');
+    }
+
+    const recordingsDir = path.join(__dirname, 'uploads', 'sessions', session.sessionId);
+
+    let recordings: string[] = [];
+    if (fs.existsSync(recordingsDir)) {
+      recordings = fs.readdirSync(recordingsDir)
+        .filter((file) => file.endsWith('.mp3'))
+        .map((file) => path.join('/uploads/sessions', session.sessionId, file));
+    }
+
+    const sessionData = {
+      ...session.toObject(),
+      recordings,
+    };
+
+    return res.status(200).json(sessionData);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send('Error retrieving session');
+  }
+});
+
+// Delete a Session
+app.delete('/api/session/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const session = await Session.findOne({ sessionId: id });
+    if (!session) {
+      return res.status(404).send('Session not found');
+    }
+
+    if (req.session && (session.userId !== req.session.userId && !req.session.isAdmin)) {
+      return res.status(403).send('Not authorized to delete this session!');
+    }
+
+    const recordingsDir = path.join(__dirname, 'uploads', 'sessions', session.sessionId);
+    if (fs.existsSync(recordingsDir)) {
+      fs.readdirSync(recordingsDir).forEach((file) => {
+        fs.unlinkSync(path.join(recordingsDir, file));
+      });
+      fs.rmdirSync(recordingsDir);
+    }
+
+    await Session.deleteOne({ sessionId: id });
+
+    return res.status(200).send('Session deleted successfully');
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send('Error deleting session');
+  }
+});
 
 
 // Handle other routes by serving the React app

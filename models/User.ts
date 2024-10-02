@@ -1,10 +1,10 @@
-// models/User.ts
-
 import mongoose from 'mongoose';
+
+const possibleStates = ['know', 'learning', 'want-to-learn', 'relearn'];
 
 const TuneStateSchema = new mongoose.Schema({
   tuneId: { type: String, required: true },
-  state: { type: String, required: true },
+  state: { type: String, required: true, enum: possibleStates },
   lastPractice: { type: Date },
   dateAdded: { type: Date, default: Date.now },
   comments: { type: String },
@@ -13,7 +13,7 @@ const TuneStateSchema = new mongoose.Schema({
 
 const SetStateSchema = new mongoose.Schema({
   setId: { type: String, required: true },
-  state: { type: String, required: true },
+  state: { type: String, required: true, enum: possibleStates },
   lastPractice: { type: Date },
   dateAdded: { type: Date, default: Date.now },
   comments: { type: String },
@@ -22,7 +22,7 @@ const SetStateSchema = new mongoose.Schema({
 
 const SessionStateSchema = new mongoose.Schema({
   sessionId: { type: String, required: true },
-  state: { type: String, required: true },
+  state: { type: String, required: true, enum: possibleStates },
   dateAdded: { type: Date, default: Date.now },
   comments: { type: String },
   hidden: { type: Boolean, default: false }
