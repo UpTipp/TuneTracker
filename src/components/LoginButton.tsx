@@ -1,9 +1,20 @@
 // LoginButton.tsx
-import React from 'react';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Button } from 'flowbite-react';
+import Cookies from 'js-cookie';
 
 const LoginButton = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const userCookie = Cookies.get('user');
+    console.log('useEffect ran, userCookie:', userCookie);
+    if (userCookie && userCookie !== undefined && userCookie !== '{}') {
+      setIsLoggedIn(true);
+    } else {
+      setIsLoggedIn(false);
+    }
+  }, []);
 
   const handleLogin = () => {
     // Redirect to Google authentication
@@ -13,8 +24,11 @@ const LoginButton = () => {
   const handleLogout = () => {
     fetch(`${window.location.origin}/logout/`, { method: 'GET', credentials: 'include' })
       .then(response => {
+        Cookies.remove('user');
         if (!response.ok) {
           console.error('Logout failed');
+        } else {
+          setIsLoggedIn(false);
         }
       });
   };
@@ -22,19 +36,13 @@ const LoginButton = () => {
   return (
     <div>
       {isLoggedIn ? (
-        <button
-          onClick={handleLogout}
-          className="md:px-4 md:py-2 px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded"
-        >
+        <Button onClick={handleLogout} className="bg-red-400 hover:enabled:bg-red-500  text-white">
           Logout
-        </button>
+        </Button>
       ) : (
-        <button
-          onClick={handleLogin}
-          className="md:px-4 md:py-2 px-2 py-1 bg-blue-500 hover:bg-blue-700 text-white rounded-md"
-        >
+        <Button onClick={handleLogin} className="bg-blue-500 hover:enabled:bg-blue-700 text-white">
           Login with Google
-        </button>
+        </Button>
       )}
     </div>
   );

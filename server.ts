@@ -93,7 +93,8 @@ interface GoogleProfile {
 passport.use(new GoogleStrategy({
   clientID:     GOOGLE_CLIENT_ID,
   clientSecret: GOOGLE_CLIENT_SECRET,
-  callbackURL: `http://localhost:${port}/auth/google/callback`,
+  callbackURL: ((process.env.NODE_ENV === 'production') ?
+   `https://music.charlescrossan.com` : `http://localhost:${port}`) + `/auth/google/callback`,
   passReqToCallback: true
 }, async (request: Request, accessToken: string, refreshToken: string, profile: GoogleProfile, done: (error: any, user?: any) => void) => {
   try {
@@ -112,6 +113,7 @@ passport.use(new GoogleStrategy({
         email: profile.email,
         firstName: profile.given_name,
         lastName: profile.family_name,
+        isAdmin: false,
         picture: profile.picture,
         tuneStates: [],
         setStates: [],
@@ -120,10 +122,6 @@ passport.use(new GoogleStrategy({
 
       await user.save(); // Save new user to the database
     }
-
-    // Session Setting
-    request.session.userId = user.userId;
-    request.session.email = user.email;
 
     // Pass the user object to the next middleware
     return done(null, user);  // Ensure done is passed the correct parameters
@@ -135,17 +133,19 @@ passport.use(new GoogleStrategy({
 
 
 // Serializing and Deserializing User
-passport.serializeUser((user: Express.User, done: (err: any, id?: any) => void) => {
-  done(null, user);
+passport.serializeUser((user: any, done: (err: any, id?: any) => void) => {
+  done(null, user.userId);
 });
 
-passport.deserializeUser(async (user: Express.User, done: (err: any, user?: any) => void) => {
+passport.deserializeUser(async (userId: string, done: (err: any, user?: any) => void) => {
   try {
-    done(null, user); // Return the user object after fetching from the database
+    const user = await User.findOne({ userId });
+    done(null, user);
   } catch (err) {
-    done(err, null); // Handle error
+    done(err, null);
   }
 });
+
 
 /*  Middleware for files specifically recordings  */
 const storageTune = multer.diskStorage({
@@ -241,10 +241,31 @@ app.get('/auth/google',
     [ 'email', 'profile' ] }
 ));
 
-app.get('/auth/google/callback', passport.authenticate( 'google', {
-  failureRedirect: '/login', 
-  successRedirect: '/'
-}));
+app.get('/auth/google/callback', passport.authenticate('google', {
+  failureRedirect: '/', 
+}), (req, res) => {
+  const user = req.user;
+  if (!user) {
+    console.error('No user found in request');
+    return res.status(400).send('User not found');
+  }
+  
+  const userInfo = {
+    id: user.userId,
+    email: user.email,
+    isAdmin: user.isAdmin
+  };
+
+  const sessionExpiration = req.session.cookie.expires || undefined;
+    
+  res.cookie('user', JSON.stringify(userInfo), { 
+    secure: process.env.NODE_ENV === 'production',
+    expires: sessionExpiration,
+    sameSite: 'lax'
+  });
+  // Send a JSON response with additional information
+  res.status(200).redirect('/dashboard');
+});
 
 // Logout Route
 app.get('/logout', (req, res) => {

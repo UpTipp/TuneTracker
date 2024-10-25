@@ -1,5 +1,39 @@
 import mongoose from 'mongoose';
 
+
+// Define the User interface that extends Mongoose's Document
+export interface IUser extends Document {
+  userId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  isAdmin: boolean;
+  picture: string;
+  tuneStates: Array<{
+    tuneId: string;
+    state: string;
+    lastPractice?: Date;
+    dateAdded: Date;
+    comments?: string;
+    hidden: boolean;
+  }>;
+  setStates: Array<{
+    setId: string;
+    state: string;
+    lastPractice?: Date;
+    dateAdded: Date;
+    comments?: string;
+    hidden: boolean;
+  }>;
+  sessionStates: Array<{
+    sessionId: string;
+    state: string;
+    dateAdded: Date;
+    comments?: string;
+    hidden: boolean;
+  }>;
+}
+
 const possibleStates = ['know', 'learning', 'want-to-learn', 'relearn'];
 
 const TuneStateSchema = new mongoose.Schema({
@@ -33,12 +67,12 @@ const UserSchema = new mongoose.Schema({
   email: { type: String, required: true },
   firstName: { type: String, required: true },
   lastName: { type: String, required: true },
+  isAdmin: { type: Boolean, required: true, default: false},
   picture: { type: String, required: true },
   tuneStates: [TuneStateSchema],
   setStates: [SetStateSchema],
   sessionStates: [SessionStateSchema]
 });
 
-const User = mongoose.model('user', UserSchema);
-
+const User = mongoose.model<IUser>('User', UserSchema);
 export default User;

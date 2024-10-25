@@ -9,7 +9,7 @@ const Footer = () => {
       <div className='pr-2 md:pr-10'>
         <a href='https://charlescrossan.com' target="_blank" rel="noopener noreferrer"
         className='text-xs md:text-base lg:text-base hover:text-gray-300'>
-          About Me
+          About Creator
         </a>
       </div>
       <div className='pl-2 pr-2 m-0 md:pl-10 md:pr-10 text-xs md:text-base lg:text-base'>
