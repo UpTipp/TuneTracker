@@ -139,7 +139,7 @@ passport.serializeUser((user: any, done: (err: any, id?: any) => void) => {
 
 passport.deserializeUser(async (userId: string, done: (err: any, user?: any) => void) => {
   try {
-    const user = await User.findOne({ userId });
+    const user = await User.findOne({ userId: userId });
     done(null, user);
   } catch (err) {
     done(err, null);
@@ -245,15 +245,19 @@ app.get('/auth/google/callback', passport.authenticate('google', {
   failureRedirect: '/', 
 }), (req, res) => {
   const user = req.user;
+  req.session.userId = user.userId;
+  req.session.isAdmin = user.isAdmin;
+  req.session.email = user.email;
+  req.session.save();
   if (!user) {
     console.error('No user found in request');
     return res.status(400).send('User not found');
   }
-  
+
   const userInfo = {
-    id: user.userId,
-    email: user.email,
-    isAdmin: user.isAdmin
+    id: req.session.userId,
+    email: req.session.email,
+    isAdmin: req.session.isAdmin
   };
 
   const sessionExpiration = req.session.cookie.expires || undefined;
@@ -264,12 +268,12 @@ app.get('/auth/google/callback', passport.authenticate('google', {
     sameSite: 'lax'
   });
   // Send a JSON response with additional information
-  res.status(200).redirect('/dashboard');
+  res.status(200).redirect('/user/' + req.session.userId);
 });
 
 // Logout Route
 app.get('/logout', (req, res) => {
-  if (!req.user) {
+  if (!req.session) {
     return res.status(400).send('You are already logged out');
   }
 
@@ -301,10 +305,30 @@ app.get('/logout', (req, res) => {
   });
 });
 
+// Users
+app.get('/api/users/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const user = await User.findOne({ userId: id });
+
+    if (user) {
+      return res.status(200).json(JSON.stringify(user));
+    } else {
+      return res.status(404).send('User not found');
+    }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send('Error retrieving user');
+  }
+});
+
 // Tunes
 
 // Posting Tunes
-app.post('/api/tune', uploadTune.array('recordings'), async (req, res) => {
+app.post('/api/tunes', uploadTune.array('recordings'), async (req, res) => {
+  console.log(req.session);
+  console.log(req.body);
   if (!req.session || !req.session.userId) {
     return res.status(403).send('Not Logged In!');
   }
@@ -318,7 +342,7 @@ app.post('/api/tune', uploadTune.array('recordings'), async (req, res) => {
   try {
     // Generate a unique tuneId
     let tuneId = crypto.randomBytes(16).toString("hex");
-    while (await Tune.findOne({ tuneId })) {
+    while (await Tune.findOne({ tuneId : tuneId })) {
       tuneId = crypto.randomBytes(16).toString("hex");
     }
 
@@ -340,6 +364,14 @@ app.post('/api/tune', uploadTune.array('recordings'), async (req, res) => {
     });
 
     await newTune.save();
+
+    // Add the tune to the user's tuneStates
+    let user = await User.findOne({ userId: req.session.userId });
+    user.tuneStates.push({ tuneId, state: 'want-to-learn', lastPractice: new Date(),
+       dateAdded: new Date(), comments: "", hidden: false });
+    console.log(user);
+    await user.save();
+
     return res.status(201).json({ message: 'Tune created successfully', tune: newTune });
   } catch (error) {
     console.error(error);
@@ -349,7 +381,7 @@ app.post('/api/tune', uploadTune.array('recordings'), async (req, res) => {
 
 
 // Getting a Specific Tune
-app.get('/api/tune/:id', async (req, res) => {
+app.get('/api/tunes/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -389,12 +421,12 @@ app.get('/api/tune/:id', async (req, res) => {
 
 
 // Updating a Specific Tune
-app.put('/api/tune/:id', uploadTune.array('recordings'), async (req, res) => {
+app.put('/api/tunes/:id', uploadTune.array('recordings'), async (req, res) => {
   const { id } = req.params;
   const { recordingActions } = req.body; // Expect an array of actions for the existing recordings
 
   try {
-    const tune = await Tune.findById(id);
+    const tune = await Tune.findOne({tuneId : id});
     if (!tune) {
       return res.status(404).send('No Tune Found!');
     }
@@ -466,11 +498,11 @@ app.put('/api/tune/:id', uploadTune.array('recordings'), async (req, res) => {
 });
 
 // Deleting a Specific Tune
-// app.delete('/api/tune/:id', async (req, res) => {
+// app.delete('/api/tunes/:id', async (req, res) => {
 //   const { id } = req.params;
 
 //   try {
-//     const tune = await Tune.findById(id);
+//     const tune = await Tune.findOne( {tuneId : id} );
 //     if (!tune) {
 //       return res.status(404).send('No Tune Found!');
 //     }
@@ -503,7 +535,7 @@ app.put('/api/tune/:id', uploadTune.array('recordings'), async (req, res) => {
 // Sets
 
 // Posting Sets
-app.post('/api/set', uploadSet.array('recordings'), async (req, res) => {
+app.post('/api/sets', uploadSet.array('recordings'), async (req, res) => {
   if (!req.session || !req.session.userId) {
     return res.status(403).send('Not Logged In!');
   }
@@ -539,7 +571,7 @@ app.post('/api/set', uploadSet.array('recordings'), async (req, res) => {
 });
 
 // Getting a specific Set
-app.get('/api/set/:id', async (req, res) => {
+app.get('/api/sets/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -571,7 +603,7 @@ app.get('/api/set/:id', async (req, res) => {
 });
 
 // Updating a Set
-app.put('/api/set/:id', uploadSet.array('recordings'), async (req, res) => {
+app.put('/api/sets/:id', uploadSet.array('recordings'), async (req, res) => {
   const { id } = req.params;
   const { recordingActions } = req.body; // Expecting an array of actions like ['keep', 'delete', ...]
 
@@ -669,7 +701,7 @@ app.put('/api/set/:id', uploadSet.array('recordings'), async (req, res) => {
 });
 
 // Deleting a Set
-app.delete('/api/set/:id', async (req, res) => {
+app.delete('/api/sets/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -703,7 +735,7 @@ app.delete('/api/set/:id', async (req, res) => {
 // Session
 
 // Posting a Session
-app.post('/api/session', uploadSession.array('recordings'), async (req, res) => {
+app.post('/api/sessions', uploadSession.array('recordings'), async (req, res) => {
   if (!req.session || !req.session.userId) {
     return res.status(403).send('Not Logged In!');
   }
@@ -740,7 +772,7 @@ app.post('/api/session', uploadSession.array('recordings'), async (req, res) => 
 });
 
 // Getting a Session
-app.get('/api/session/:id', async (req, res) => {
+app.get('/api/sessions/:id', async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -774,7 +806,7 @@ app.get('/api/session/:id', async (req, res) => {
 });
 
 // Delete a Session
-app.delete('/api/session/:id', async (req, res) => {
+app.delete('/api/sessions/:id', async (req, res) => {
   const { id } = req.params;
 
   try {

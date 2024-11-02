@@ -15,7 +15,7 @@ interface SetDocument extends Document {
 const SetSchema: Schema = new Schema({
   setId: { type: String, required: true, unique: true },
   userId: { type: String, required: true, ref: 'User' }, // FK to User
-  setName: { type: String },
+  setName: { type: String, default: '' },
   tuneIds: [{ type: String, required: true, ref: 'Tune' }], // FK to Tunes, order matters
   recordingRef: [{ type: String }],
   links: [{ type: String }],

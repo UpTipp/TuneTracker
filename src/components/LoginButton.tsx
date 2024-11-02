@@ -1,28 +1,19 @@
 // LoginButton.tsx
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Button } from 'flowbite-react';
 import Cookies from 'js-cookie';
+import { useAuth } from '../context/AuthContext';
 
 const LoginButton = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
-    const userCookie = Cookies.get('user');
-    console.log('useEffect ran, userCookie:', userCookie);
-    if (userCookie && userCookie !== undefined && userCookie !== '{}') {
-      setIsLoggedIn(true);
-    } else {
-      setIsLoggedIn(false);
-    }
-  }, []);
+  const { isLoggedIn, setIsLoggedIn } = useAuth();
 
   const handleLogin = () => {
     // Redirect to Google authentication
     window.location.href = `${window.location.origin}/auth/google/`;
   };
 
-  const handleLogout = () => {
-    fetch(`${window.location.origin}/logout/`, { method: 'GET', credentials: 'include' })
+  const handleLogout = async () => {
+    await fetch(`${window.location.origin}/logout/`, { method: 'GET', credentials: 'include' })
       .then(response => {
         Cookies.remove('user');
         if (!response.ok) {
@@ -31,12 +22,13 @@ const LoginButton = () => {
           setIsLoggedIn(false);
         }
       });
+    window.location.reload();
   };
 
   return (
     <div>
       {isLoggedIn ? (
-        <Button onClick={handleLogout} className="bg-red-400 hover:enabled:bg-red-500  text-white">
+        <Button onClick={handleLogout} className="bg-red-400 hover:enabled:bg-red-500 text-white">
           Logout
         </Button>
       ) : (
