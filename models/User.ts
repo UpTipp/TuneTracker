@@ -1,5 +1,4 @@
-import mongoose from 'mongoose';
-
+import mongoose from "mongoose";
 
 // Define the User interface that extends Mongoose's Document
 export interface IUser extends Document {
@@ -32,9 +31,10 @@ export interface IUser extends Document {
     comments?: string;
     hidden: boolean;
   }>;
+  dateAdded: Date;
 }
 
-const possibleStates = ['know', 'learning', 'want-to-learn', 'relearn'];
+const possibleStates = ["know", "learning", "want-to-learn", "relearn"];
 
 const TuneStateSchema = new mongoose.Schema({
   tuneId: { type: String, required: true },
@@ -42,7 +42,7 @@ const TuneStateSchema = new mongoose.Schema({
   lastPractice: { type: Date },
   dateAdded: { type: Date, default: Date.now },
   comments: { type: String },
-  hidden: { type: Boolean, default: false }
+  hidden: { type: Boolean, default: false },
 });
 
 const SetStateSchema = new mongoose.Schema({
@@ -51,7 +51,7 @@ const SetStateSchema = new mongoose.Schema({
   lastPractice: { type: Date },
   dateAdded: { type: Date, default: Date.now },
   comments: { type: String },
-  hidden: { type: Boolean, default: false }
+  hidden: { type: Boolean, default: false },
 });
 
 const SessionStateSchema = new mongoose.Schema({
@@ -59,7 +59,7 @@ const SessionStateSchema = new mongoose.Schema({
   state: { type: String, required: true, enum: possibleStates },
   dateAdded: { type: Date, default: Date.now },
   comments: { type: String },
-  hidden: { type: Boolean, default: false }
+  hidden: { type: Boolean, default: false },
 });
 
 const UserSchema = new mongoose.Schema({
@@ -67,12 +67,13 @@ const UserSchema = new mongoose.Schema({
   email: { type: String, required: true },
   firstName: { type: String, required: true },
   lastName: { type: String, required: true },
-  isAdmin: { type: Boolean, required: true, default: false},
+  isAdmin: { type: Boolean, required: true, default: false },
   picture: { type: String, required: true },
   tuneStates: [TuneStateSchema],
   setStates: [SetStateSchema],
-  sessionStates: [SessionStateSchema]
+  sessionStates: [SessionStateSchema],
+  dateAdded: { type: Date, default: Date.now, required: true },
 });
 
-const User = mongoose.model<IUser>('User', UserSchema);
+const User = mongoose.model<IUser>("User", UserSchema);
 export default User;

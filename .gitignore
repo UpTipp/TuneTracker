@@ -1,6 +1,11 @@
 # Private
 /private
 
+# Recordings
+/uploads/tunes/*
+/uploads/sets/*
+/uploads/sessions/*
+
 # Logs
 logs
 *.log
