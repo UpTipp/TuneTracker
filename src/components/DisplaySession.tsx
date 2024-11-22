@@ -8,7 +8,7 @@ import ItemHeader from "./ItemHeader";
 import ReactPlayer from "react-player";
 import Cookie from "js-cookie";
 import UpdatePractice from "./UpdatePractice";
-import UpdateSet from "./UpdateSet";
+import UpdateSession from "./UpdateSession";
 import AddItem from "./AddItem";
 import CopyItem from "./CopyItem";
 
@@ -18,7 +18,7 @@ const customCard = {
   },
 };
 
-const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory }) => {
+const DisplaySession = ({ session, userId, dataFetch, goTo, itemMemory }) => {
   const checkId = JSON.parse(Cookie.get("user") || "{}").id;
   const [isFlipped, setIsFlipped] = useState(false);
 
@@ -42,11 +42,13 @@ const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory }) => {
 
   const linkClink = (type: string, id: string) => {
     goTo(type, id);
-    itemMemory("set", set.setId);
+    itemMemory("session", session.sessionId);
   };
 
-  let dateAdded = set.dateAdded ? new Date(set.dateAdded) : null;
-  let lastPractice = set.lastPractice ? new Date(set.lastPractice) : new Date();
+  let dateAdded = session.dateAdded ? new Date(session.dateAdded) : null;
+  let lastPractice = session.lastPractice
+    ? new Date(session.lastPractice)
+    : new Date();
   const dateDiffer = Math.floor(
     (Date.now() - lastPractice.getTime()) / (1000 * 60 * 60 * 24)
   );
@@ -55,37 +57,38 @@ const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory }) => {
   let lastPracticeStr = lastPractice ? lastPractice.toDateString() : null;
 
   const hasBackContent =
-    (set.link && set.link.length > 0) ||
-    (set.creatorComments && set.creatorComments !== "") ||
-    (set.recordingRef && set.recordingRef.length > 0);
+    (session.link && session.link.length > 0) ||
+    (session.creatorComments && session.creatorComments !== "") ||
+    (session.recordingRef && session.recordingRef.length > 0);
 
   return (
     <Card
       onClick={hasBackContent ? handleCardClick : undefined}
       theme={customCard}
-      id={"se:" + set.setId}
+      id={"se:" + session.sessionId}
       className="w-full max-w-lg border-2 hover:border-blue-400 flex flex-col justify-between"
     >
       {isFlipped ? (
         // Back of card
         <>
           <ItemHeader
-            itemName={set.setName}
-            item={"set"}
-            itemType={"Set"}
-            itemState={set.state}
-            itemId={set.setId}
+            itemName={session.sessionName}
+            item={"session"}
+            itemType={"Session"}
+            itemState={session.state}
+            itemId={session.sessionId}
             userId={userId}
           />
           <div>
-            {set.link && set.link.length > 0 && (
+            {/* Links section */}
+            {session.link && session.link.length > 0 && (
               <>
                 <div className="pt-1 pb-1">
                   <h6 className="text-md mb-1">Links:</h6>
                   <div className="p-2 border border-gray-600 bg-gray-300 bg-opacity-50 rounded-md flex justify-normal flex-wrap non-clickable">
-                    {Array.isArray(set.link) &&
-                      set.link.length > 0 &&
-                      set.link.map((link, index) => (
+                    {Array.isArray(session.link) &&
+                      session.link.length > 0 &&
+                      session.link.map((link, index) => (
                         <>
                           <a
                             key={index}
@@ -94,31 +97,37 @@ const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory }) => {
                           >
                             {link}
                           </a>
-                          {index < set.link.length - 1 && <p>, </p>}
+                          {index < session.link.length - 1 && <p>, </p>}
                         </>
                       ))}
                   </div>
                 </div>
               </>
             )}
-            {set.creatorComments &&
-              set.creatorComments !== "" &&
-              set.orgUserId !== userId && (
+
+            {/* Comments section */}
+            {session.creatorComments &&
+              session.creatorComments !== "" &&
+              session.orgUserId !== userId && (
                 <>
                   <div className="pt-1 pb-1">
                     <h6 className="text-md">Tracker's Comment:</h6>
                     <div className="p-2 border border-gray-600 bg-gray-300 bg-opacity-50 rounded-md non-clickable">
-                      <p className="text-sm italic">{set.creatorComments}</p>
+                      <p className="text-sm italic">
+                        {session.creatorComments}
+                      </p>
                     </div>
                   </div>
                 </>
               )}
-            {set.recordingRef && set.recordingRef.length > 0 && (
+
+            {/* Recordings section */}
+            {session.recordingRef && session.recordingRef.length > 0 && (
               <>
                 <div className="pt-1 pb-1">
                   <h6 className="text-md">Recording(s):</h6>
                   <div className="p-2 border border-gray-600 bg-gray-300 bg-opacity-50 rounded-md non-clickable">
-                    {set.recordingRef.map((recording, index) => (
+                    {session.recordingRef.map((recording, index) => (
                       <ReactPlayer
                         key={index}
                         url={recording}
@@ -133,6 +142,7 @@ const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory }) => {
             )}
           </div>
           <div className="flex-grow"></div>
+          {/* Back arrow */}
           {hasBackContent ? (
             <div className="w-full flex justify-center items-center pt-1 h-11">
               <IoIosArrowDropleftCircle className="arrow opacity-60" />
@@ -147,93 +157,117 @@ const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory }) => {
         // Front of card
         <>
           <ItemHeader
-            itemName={set.setName}
-            item={"set"}
-            itemType={"Set"}
-            itemState={set.state}
-            itemId={set.setId}
+            itemName={session.sessionName}
+            item={"session"}
+            itemType={"Session"}
+            itemState={session.state}
+            itemId={session.sessionId}
             userId={userId}
           />
           <div>
-            {set.lastPractice && (
+            {session.lastPractice && (
               <p className="text-sm italic pb-1">
                 Last Practiced: {lastPracticeStr} ({dateDiffer} days ago)
               </p>
             )}
-            {set.creatorComments &&
-              set.creatorComments !== "" &&
-              set.orgUserId === userId && (
+
+            {/* Creator Comments section */}
+            {session.creatorComments &&
+              session.creatorComments !== "" &&
+              session.orgUserId === userId && (
                 <>
                   <div className="pt-1 pb-1">
                     <h6 className="text-md">User's Comment:</h6>
                     <div className="p-2 border border-gray-600 bg-gray-300 bg-opacity-50 rounded-md">
-                      <p className="text-sm italic">{set.creatorComments}</p>
+                      <p className="text-sm italic">
+                        {session.creatorComments}
+                      </p>
                     </div>
                   </div>
                 </>
               )}
 
-            {set.comments &&
-              set.comments !== "" &&
-              set.orgUserId !== userId && (
+            {session.comments &&
+              session.comments !== "" &&
+              session.orgUserId !== userId && (
                 <div className="pt-1 pb-1">
                   <h6 className="text-md">User's Comment:</h6>
                   <div className="p-2 border border-gray-600 bg-gray-300 bg-opacity-50 rounded-md">
-                    <p className="text-sm italic">{set.comments}</p>
+                    <p className="text-sm italic">{session.comments}</p>
                   </div>
                 </div>
               )}
 
+            {/* Referenced Items section */}
             <div className="pt-1 pb-1">
-              <h6 className="text-md">Referenced In:</h6>
+              <h6 className="text-md">Referenced Items:</h6>
 
+              {/* Tunes section */}
               <div className="flex justify-normal flex-wrap non-clickable">
                 <p className="text-sm text-green-500 mr-1">Tunes:</p>
-                {set.tuneIds.map((tuneId, index) => (
-                  <>
-                    <a
-                      className="text-sm text-blue-400 hover:text-emerald-500"
-                      onClick={() => linkClink("tune", tuneId)}
-                    >
-                      [
-                      {set.tuneNames[index].length <= 20
-                        ? set.tuneNames[index]
-                        : set.tuneNames[index].substring(0, 20) + "..."}
-                      ]
-                    </a>
-                    {index < set.tuneIds.length - 1 && (
-                      <p className="mr-1">, </p>
-                    )}
-                  </>
-                ))}
+                {session.tuneIds && session.tuneIds.length > 0 ? (
+                  session.tuneIds.map((tuneId, index) => (
+                    <>
+                      <a
+                        key={tuneId}
+                        className="text-sm text-blue-400 hover:text-emerald-500"
+                        onClick={() => linkClink("tune", tuneId)}
+                      >
+                        [
+                        {session.tuneNames[index].length <= 20
+                          ? session.tuneNames[index]
+                          : session.tuneNames[index].substring(0, 20) + "..."}
+                        ]
+                      </a>
+                      {index < session.tuneIds.length - 1 && (
+                        <p className="mr-1">, </p>
+                      )}
+                    </>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500">No tunes added</p>
+                )}
               </div>
+
+              {/* Sets section */}
               <div className="flex justify-normal flex-wrap non-clickable">
-                <p className="text-sm text-green-500 mr-1">Sessions:</p>
-                {set.sessionIds.map((sessionId, index) => (
-                  <>
-                    <a
-                      className="text-sm text-blue-400 hover:text-emerald-500"
-                      onClick={() => linkClink("session", sessionId)}
-                    >
-                      [{index}]
-                    </a>
-                    {index < set.sessionIds.length - 1 && (
-                      <p className="mr-1">, </p>
-                    )}
-                  </>
-                ))}
+                <p className="text-sm text-green-500 mr-1">Sets:</p>
+                {session.setIds && session.setIds.length > 0 ? (
+                  session.setIds.map((setId, index) => (
+                    <>
+                      <a
+                        key={setId}
+                        className="text-sm text-blue-400 hover:text-emerald-500"
+                        onClick={() => linkClink("set", setId)}
+                      >
+                        [
+                        {session.setNames[index].length <= 20
+                          ? session.setNames[index]
+                          : session.setNames[index].substring(0, 20) + "..."}
+                        ]
+                      </a>
+                      {index < session.setIds.length - 1 && (
+                        <p className="mr-1">, </p>
+                      )}
+                    </>
+                  ))
+                ) : (
+                  <p className="text-sm text-gray-500">No sets added</p>
+                )}
               </div>
             </div>
           </div>
+
+          {/* Action buttons */}
           <div className="flex-grow"></div>
           <div className="flex justify-between pt-1">
             {userId === checkId ? (
               <>
-                {userId === set.orgUserId ? (
+                {userId === session.orgUserId ? (
                   <>
                     <UpdatePractice
-                      type={"set"}
-                      id={set.setId}
+                      type={"session"}
+                      id={session.sessionId}
                       userId={userId}
                       dataFetch={dataFetch}
                     />
@@ -247,21 +281,25 @@ const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory }) => {
                       </div>
                     )}
                     <div className="non-clickable">
-                      <UpdateSet
-                        type={"set"}
-                        itemId={set.setId}
-                        set={{
-                          ...set,
-                          tunes: set.tuneIds.map((id, index) => ({
-                            tuneId: id,
-                            tuneName: set.tuneNames[index],
-                          })),
+                      <UpdateSession
+                        type={"session"}
+                        itemId={session.sessionId}
+                        session={{
+                          ...session,
+                          tunes:
+                            session.tuneIds?.map((id, index) => ({
+                              tuneId: id,
+                              tuneName: session.tuneNames[index],
+                            })) || [],
+                          sets:
+                            session.setIds?.map((id, index) => ({
+                              setId: id,
+                              setName: session.setNames[index],
+                            })) || [],
                         }}
                         dataFetch={dataFetch}
-                        userTunes={set.tuneIds.map((id, index) => ({
-                          tuneId: id,
-                          tuneName: set.tuneNames[index],
-                        }))}
+                        userTunes={session.userTunes || []}
+                        userSets={session.userSets || []}
                       />
                     </div>
                   </>
@@ -278,8 +316,8 @@ const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory }) => {
                       </div>
                     )}
                     <UpdatePractice
-                      type={"set"}
-                      id={set.setId}
+                      type={"session"}
+                      id={session.sessionId}
                       userId={userId}
                       dataFetch={dataFetch}
                     />
@@ -320,7 +358,7 @@ const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory }) => {
                       </div>
                     )}
                     <Button className="bg-blue-400" disabled>
-                      Add Set
+                      Add Session
                     </Button>
                   </>
                 )}
@@ -333,4 +371,4 @@ const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory }) => {
   );
 };
 
-export default DisplaySet;
+export default DisplaySession;

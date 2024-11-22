@@ -18,7 +18,7 @@ const customCard = {
   },
 };
 
-const DisplayTune = ({ tune, userId, dataFetch }) => {
+const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
   const checkId = JSON.parse(Cookie.get("user") || "{}").id;
   const [isFlipped, setIsFlipped] = useState(false);
 
@@ -40,8 +40,15 @@ const DisplayTune = ({ tune, userId, dataFetch }) => {
     setIsFlipped(!isFlipped);
   };
 
+  const linkClink = (type: string, id: string) => {
+    goTo(type, id);
+    itemMemory("tune", tune.tuneId);
+  };
+
   let dateAdded = tune.dateAdded ? new Date(tune.dateAdded) : null;
-  let lastPractice = tune.lastPractice ? new Date(tune.lastPractice) : null;
+  let lastPractice = tune.lastPractice
+    ? new Date(tune.lastPractice)
+    : new Date();
   const dateDiffer = Math.floor(
     (Date.now() - lastPractice.getTime()) / (1000 * 60 * 60 * 24)
   );
@@ -59,7 +66,7 @@ const DisplayTune = ({ tune, userId, dataFetch }) => {
       onClick={hasBackContent ? handleCardClick : undefined}
       theme={customCard}
       id={"tu:" + tune.tuneId}
-      className="w-full max-w-lg hover:border-blue-400 flex flex-col justify-between"
+      className="w-full max-w-lg border-2 hover:border-blue-400 flex flex-col justify-between"
     >
       {isFlipped ? (
         // Back of card
@@ -197,30 +204,38 @@ const DisplayTune = ({ tune, userId, dataFetch }) => {
               <h6 className="text-md">Referenced In:</h6>
 
               <div className="flex justify-normal flex-wrap non-clickable">
-                <p className="text-sm text-green-500">Sets:</p>
+                <p className="text-sm text-green-500 mr-1">Sets:</p>
                 {tune.setIds.map((setId, index) => (
                   <>
                     <a
                       className="text-sm text-blue-400 hover:text-emerald-500"
-                      href={"st:" + setId}
+                      onClick={() => linkClink("set", setId)}
                     >
-                      [{tune.setName[index].substring(0, 20)}...]
+                      [
+                      {tune.setNames[index].length <= 20
+                        ? tune.setNames[index]
+                        : tune.setNames[index].substring(0, 20) + "..."}
+                      ]
                     </a>
-                    {index < tune.link.length - 1 && <p>, </p>}
+                    {index < tune.setIds.length - 1 && (
+                      <p className="mr-1">,</p>
+                    )}
                   </>
                 ))}
               </div>
               <div className="flex justify-normal flex-wrap non-clickable">
-                <p className="text-sm text-green-500">Sessions:</p>
+                <p className="text-sm text-green-500 mr-1">Sessions:</p>
                 {tune.sessionIds.map((sessionId, index) => (
                   <>
                     <a
                       className="text-sm text-blue-400 hover:text-emerald-500"
-                      href={"se:" + sessionId}
+                      onClick={() => linkClink("session", sessionId)}
                     >
                       [{index}]
                     </a>
-                    {index < tune.link.length - 1 && <p>, </p>}
+                    {index < tune.sessionIds.length - 1 && (
+                      <p className="mr-1">, </p>
+                    )}
                   </>
                 ))}
               </div>

@@ -17,9 +17,7 @@ const Header = () => {
   useEffect(() => {
     const cookie = Cookies.get("user");
     const info = JSON.parse(cookie || "{}");
-    console.log(`info: `, { info });
     userID.current = info.id || "";
-    console.log(info.isAdmin === true);
     if (info.isAdmin && info.isAdmin === true) {
       isAdmin.current = true;
     } else {

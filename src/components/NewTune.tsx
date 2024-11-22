@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   Button,
   Textarea,
@@ -8,7 +8,9 @@ import {
   Modal,
   TextInput,
 } from "flowbite-react";
-import ReactPlayer from "react-player";
+import FileUploadSection from "./FileUploadSection";
+import LinksSection from "./LinksSection";
+import AudioRecorder from "./AudioRecorder";
 
 const NewTune = ({ dataFetch }) => {
   const [openModal, setOpenModal] = useState(false);
@@ -23,6 +25,11 @@ const NewTune = ({ dataFetch }) => {
   const [files, setFiles] = useState<File[]>([]);
   const [comments, setComments] = useState("");
   const [fileURLs, setFileURLs] = useState<string[]>([]);
+
+  const handleRecordingComplete = (file: File, url: string) => {
+    setFiles((prevFiles) => [...prevFiles, file]);
+    setFileURLs((prevURLs) => [...prevURLs, url]);
+  };
 
   function onCloseModal() {
     setOpenModal(false);
@@ -101,7 +108,7 @@ const NewTune = ({ dataFetch }) => {
 
       const result = await response.json();
       console.log("Success:", result);
-      dataFetch(true);
+      dataFetch();
       setOpenModal(false);
       onCloseModal();
     } catch (error) {
@@ -220,72 +227,20 @@ const NewTune = ({ dataFetch }) => {
               />
             </div>
 
-            {/* Links */}
-            <div>
-              <div className="mb-2 block">
-                <Label htmlFor="links" value="Link(s)" />
-              </div>
-              <div className="flex">
-                <TextInput
-                  id="linkInput"
-                  value={linkInput}
-                  onChange={(event) => setLinkInput(event.target.value)}
-                />
-                <Button onClick={addLink} className="ml-2">
-                  Add Link
-                </Button>
-              </div>
-              <ul className="mt-2">
-                {links.map((link, index) => (
-                  <li key={index} className="flex items-center">
-                    <span>{link}</span>
-                    <Button
-                      onClick={() => removeLink(index)}
-                      className="ml-2"
-                      size="xs"
-                      color="red"
-                    >
-                      Remove
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* File Input */}
-            <div id="fileUpload" className="max-w-md">
-              <div className="mb-2 block">
-                <Label htmlFor="file" value="Upload file(s)" />
-              </div>
-              <FileInput
-                id="file"
-                name="recordings" // Ensure this matches the Multer field name
-                onChange={addFile}
-                helperText="Mp3, Mp4, etc. MAX (10 MB)"
-                multiple
-              />
-              <ul className="mt-2">
-                {fileURLs.map((url, index) => (
-                  <li key={index} className="flex items-center">
-                    <ReactPlayer
-                      url={url}
-                      controls
-                      width="80%"
-                      height="30px"
-                      className="ml-2"
-                    />
-                    <Button
-                      onClick={() => removeFile(index)}
-                      className="ml-2"
-                      size="xs"
-                      color="red"
-                    >
-                      Remove
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <LinksSection
+              links={links}
+              linkInput={linkInput}
+              onLinkInputChange={setLinkInput}
+              onAddLink={addLink}
+              onRemoveLink={removeLink}
+            />
+            <AudioRecorder onRecordingComplete={handleRecordingComplete} />
+            <FileUploadSection
+              files={files}
+              fileURLs={fileURLs}
+              onFileAdd={addFile}
+              onFileRemove={removeFile}
+            />
 
             {/* Comments */}
             <div>

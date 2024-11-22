@@ -16,6 +16,7 @@ import express, { Request } from "express";
 
 // Extend the Request interface to include tuneId
 interface CustomRequest extends Request {
+  setId: any;
   tuneId?: string;
 }
 import cors from "cors";
@@ -198,10 +199,8 @@ passport.deserializeUser(
 /*  Middleware for files specifically recordings  */
 const storageTune = multer.diskStorage({
   destination: function (req: CustomRequest, file, cb) {
-    console.log("Request tuneId in storageTune:", req.tuneId); // Log the tuneId
-    const tuneId = req.tuneId; // Use the tuneId from the req object
-    console.log("Tune ID in storageTune destination:", tuneId); // Log the tuneId
-    const dir = path.join("uploads", "tunes", tuneId); // Directory for tune's recordings
+    const tuneId = req.tuneId;
+    const dir = path.join("uploads", "tunes", tuneId);
 
     // Ensure directory exists or create it
     if (!fs.existsSync(dir)) {
@@ -223,25 +222,25 @@ const storageTune = multer.diskStorage({
 });
 
 const storageSet = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const setId = req.body.setId || crypto.randomBytes(16).toString("hex");
-    const dir = path.join(__dirname, "uploads", "sets", setId);
+  destination: function (req: CustomRequest, file, cb) {
+    const setId = req.setId;
+    const dir = path.join("uploads", "sets", setId);
 
+    // Ensure directory exists or create it
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
 
-    // Attach setId to req.body for later use
-    req.body.setId = setId;
-
-    cb(null, dir);
+    cb(null, dir); // Set directory as the destination
   },
-  filename: function (req, file, cb) {
-    const dir = path.join(__dirname, "uploads", "sets", req.body.setId);
-    const files = fs.existsSync(dir) ? fs.readdirSync(dir) : [];
-    const nextIndex = files.length + 1;
-    const ext = path.extname(".mp3"); // Assuming recordings are .mp3
-    cb(null, `${nextIndex}${ext}`);
+  filename: function (req: CustomRequest, file, cb) {
+    // Find the next sequential number for the file
+    const setId = req.setId;
+    const dir = path.join("uploads", "sets", setId);
+    const files = fs.readdirSync(dir);
+    const nextIndex = files.length + 1; // Increment based on current files in the directory
+    const ext = ".mp3"; // Directly set the extension to .mp3
+    cb(null, `${nextIndex}${ext}`); // Name files sequentially
   },
 });
 
@@ -812,41 +811,116 @@ app.put("/api/tunes/:id", async (req: CustomRequest, res) => {
 // Sets
 
 // Posting Sets
-app.post("/api/sets", uploadSet, async (req, res) => {
-  if (!req.session || !req.session.userId) {
-    return res.status(403).send("Not Logged In!");
+async function createSetId(req, res, next) {
+  console.log("Generating setId...");
+  let attempts = 0;
+  const maxAttempts = 10; // Set a maximum number of attempts to avoid infinite loop
+
+  while (attempts < maxAttempts) {
+    let setId = crypto.randomBytes(16).toString("hex");
+    const existingTune = await Set.findOne({ setId: setId });
+
+    if (!existingTune) {
+      req.setId = setId; // Set tuneId directly on the req object
+      console.log("Generated setId:", setId);
+      return next();
+    }
+
+    console.log("Duplicate setId found, regenerating...");
+    attempts++;
   }
 
-  const { setName, tuneIds, comments } = req.body;
+  console.error(
+    "Failed to generate a unique setId after",
+    maxAttempts,
+    "attempts"
+  );
+  return res.status(500).send("Failed to generate a unique setId");
+}
 
-  if (!setName || !tuneIds) {
-    return res.status(400).send("Missing required fields: setName or tuneIds");
-  }
+// Posting Tunes
+app.post("/api/sets", createSetId, (req: CustomRequest, res) => {
+  console.log("Incoming request to /api/sets");
+  let setId = req.setId;
+  uploadSet(req, res, async (err) => {
+    console.log("Set Id:", setId);
+    if (err) {
+      console.error(err);
+      return res.status(500).send("Error uploading files");
+    }
 
-  try {
-    const setId = req.body.setId;
+    const { setName, author, tunes, links, comments } = req.body;
 
-    // Ensure req.files is treated as an array
-    const files = req.files as Express.Multer.File[];
-    const recordingRefs = files ? files.map((file) => file.path) : [];
+    if (!req.session || !req.session.userId) {
+      return res.status(403).send("Not Logged In!");
+    }
 
-    const newSet = new Set({
-      setId,
-      userId: req.session.userId,
-      setName,
-      tuneIds: JSON.parse(tuneIds), // Assuming tuneIds is a JSON stringified array
-      recordingRef: recordingRefs,
-      comments,
-    });
+    if (!setName || tunes.length < 2) {
+      return res
+        .status(400)
+        .send("Missing required fields: setName or tunes[>=2]");
+    }
 
-    await newSet.save();
-    return res
-      .status(201)
-      .json({ message: "Set created successfully", set: newSet });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).send("Error creating set");
-  }
+    const user = await User.findOne({ userId: req.session.userId });
+
+    let uploadTunes = [];
+    for (let tune in tunes) {
+      console.log("Checking tune:", tunes[tune]);
+      if (
+        !user.tuneStates
+          .map((tuneState) => tuneState.tuneId)
+          .includes(tunes[tune])
+      ) {
+        return res
+          .status(400)
+          .send("Tune not found in user's tuneStates: " + tunes[tune]);
+      } else {
+        uploadTunes.push(tunes[tune]);
+      }
+    }
+
+    try {
+      // Ensure req.files is treated as an array
+      const files = req.files as Express.Multer.File[];
+
+      // Create an array of uploaded file paths (recording references)
+      const recordingRefs = files
+        ? files.map((file: Express.Multer.File) => file.path)
+        : [];
+
+      const newSet = new Set({
+        setId,
+        userId: req.session.userId, // User ID from session
+        setName,
+        tuneIds: uploadTunes,
+        recordingRef: recordingRefs, // Store the file paths
+        links,
+        comments,
+        dateAdded: new Date(),
+      });
+
+      await newSet.save();
+
+      // Add the tune to the user's tuneStates
+      let user = await User.findOne({ userId: req.session.userId });
+      user.setStates.push({
+        setId,
+        state: "want-to-learn",
+        lastPractice: new Date(),
+        dateAdded: new Date(),
+        comments: "",
+        hidden: false,
+      });
+      await user.save();
+
+      return res
+        .status(201)
+        .json({ message: "Tune created successfully", set: newSet });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).send("Error creating set");
+    }
+  });
 });
 
 // Getting a specific Set
@@ -854,7 +928,7 @@ app.get("/api/sets/:id", async (req, res) => {
   const { id } = req.params;
 
   try {
-    const set = await Set.findOne({ setId: id }).populate("tuneIds");
+    const set = await Set.findOne({ setId: id });
 
     if (!set) {
       return res.status(404).send("Set not found");
@@ -883,143 +957,145 @@ app.get("/api/sets/:id", async (req, res) => {
 });
 
 // Updating a Set
-app.put("/api/sets/:id", uploadSet, async (req, res) => {
-  const { id } = req.params;
-  const { recordingActions } = req.body; // Expecting an array of actions like ['keep', 'delete', ...]
+app.put("/api/sets/:id", async (req: CustomRequest, res) => {
+  req.setId = req.params.id; // Set the setId on the request object
+  uploadSet(req, res, async (err) => {
+    const { id } = req.params;
+    let { fileCommands } = req.body; // Expect an array of commands for the existing recordings
+    fileCommands = JSON.parse(fileCommands) || []; // Ensure fileCommands is an array
 
-  try {
-    const set = await Set.findOne({ setId: id });
-    if (!set) {
-      return res.status(404).send("Set not found");
-    }
-
-    // Authorization Check
-    if (
-      req.session &&
-      set.userId !== req.session.userId &&
-      !req.session.isAdmin
-    ) {
-      return res.status(403).send("Not authorized to update this set!");
-    }
-
-    const recordingsDir = path.join(__dirname, "uploads", "sets", set.setId);
-    const existingRecordings = set.recordingRef || [];
-
-    // Ensure req.files is treated as an array
-    const newFiles = req.files as Express.Multer.File[];
-    let updatedRecordings: string[] = [];
-
-    // Process the actions for existing recordings
-    if (Array.isArray(recordingActions)) {
-      recordingActions.forEach((action: string, index: number) => {
-        const existingFile = existingRecordings[index];
-        if (!existingFile) {
-          return; // Skip if no corresponding file
-        }
-        const filePath = path.join(recordingsDir, path.basename(existingFile));
-
-        switch (action) {
-          case "delete":
-            if (fs.existsSync(filePath)) {
-              fs.unlinkSync(filePath); // Delete the file
-              console.log(`Deleted file: ${filePath}`);
-            }
-            break;
-          case "keep":
-            updatedRecordings.push(existingFile); // Keep the file
-            break;
-          default:
-            // Handle other actions if necessary
-            break;
-        }
-      });
-    } else {
-      return res
-        .status(400)
-        .send("Invalid recordingActions format. Expected an array.");
-    }
-
-    // Rename existing kept files to follow sequential numbering (1.mp3, 2.mp3, etc.)
-    updatedRecordings = updatedRecordings.map((file, idx) => {
-      const newFileName = `${idx + 1}${path.extname(file)}`;
-      const oldFilePath = path.join(recordingsDir, path.basename(file));
-      const newFilePath = path.join(recordingsDir, newFileName);
-
-      if (path.basename(file) !== newFileName && fs.existsSync(oldFilePath)) {
-        fs.renameSync(oldFilePath, newFilePath); // Rename the file
-        console.log(`Renamed file from ${oldFilePath} to ${newFilePath}`);
+    try {
+      const set = await Set.findOne({ setId: id });
+      console.log("Set: ", set);
+      if (!set) {
+        return res.status(404).send("No Tune Found!");
       }
 
-      return `/uploads/sets/${set.setId}/${newFileName}`;
-    });
+      if (
+        req.session &&
+        set.userId !== req.session.userId &&
+        !req.session.isAdmin
+      ) {
+        return res.status(403).send("Not authorized to update this tune!");
+      }
 
-    // Append new recordings and name them sequentially
-    if (newFiles && newFiles.length > 0) {
-      newFiles.forEach((file, idx) => {
-        const newIndex = updatedRecordings.length + idx + 1;
-        const newFileName = `${newIndex}${path.extname(file.originalname)}`;
+      const recordingsDir = path.join(__dirname, "uploads", "sets", set.setId);
+      const existingRecordings = set.recordingRef || [];
+      console.log("Existing recordings: ", existingRecordings);
+
+      // Ensure req.files is treated as an array
+      const newFiles = req.files as Express.Multer.File[];
+      let updatedRecordings: string[] = [];
+
+      // Process the commands for existing files
+      fileCommands.forEach((command: string, index: number) => {
+        console.log(`Processing command: ${command} for index: ${index}`);
+        if (index >= existingRecordings.length) {
+          return; // Skip if the index is out of bounds
+        }
+        const existingFile = existingRecordings[index];
+        const filePath = path.join(__dirname, existingFile);
+        console.log(`Existing file path: ${filePath}`);
+        console.log(`File exists: ${fs.existsSync(filePath)}`);
+
+        if (command === "delete" && fs.existsSync(filePath)) {
+          // Delete the file
+          console.log(`Deleting file: ${filePath}`);
+          fs.unlinkSync(filePath);
+        } else if (command === "keep") {
+          // Keep the file (renamed later)
+          updatedRecordings.push(existingFile);
+        }
+      });
+
+      // Rename existing files to follow sequential numbering (1.mp3, 2.mp3, etc.)
+      updatedRecordings = updatedRecordings.map((file, idx) => {
+        console.log(`Updating file at index ${idx}`);
+        const newFileName = `${idx + 1}.mp3`;
+        const oldFilePath = path.join(__dirname, file);
         const newFilePath = path.join(recordingsDir, newFileName);
 
-        fs.renameSync(file.path, newFilePath); // Move and rename the file
-        console.log(`Uploaded new file to ${newFilePath}`);
+        if (file !== newFileName && fs.existsSync(oldFilePath)) {
+          fs.renameSync(oldFilePath, newFilePath); // Rename the file
+        }
 
-        updatedRecordings.push(`/uploads/sets/${set.setId}/${newFileName}`);
+        return newFileName;
       });
+
+      // Append new recordings and give them sequential names
+      newFiles.forEach((file, idx) => {
+        if (file && file.path) {
+          const newFileName = `${updatedRecordings.length + idx + 1}.mp3`;
+          const newFilePath = path.join(recordingsDir, newFileName);
+
+          // Move the uploaded file to the correct directory with the correct name
+          fs.renameSync(file.path, newFilePath);
+          updatedRecordings.push(newFileName);
+        }
+      });
+
+      // Update the tune with the new list of recordings
+      updatedRecordings = updatedRecordings.map((file) =>
+        path.join("/uploads/tunes", set.setId, file)
+      );
+      set.recordingRef = updatedRecordings;
+
+      // Update other fields
+      if (req.body.setName && req.body.setName !== "") {
+        set.setName = req.body.setName;
+      }
+
+      if (req.body.links) {
+        set.links = req.body.links;
+      }
+
+      if (req.body.comments) {
+        set.comments = req.body.comments;
+      }
+
+      await set.save();
+      return res.status(200).json(set);
+    } catch (error) {
+      console.error(error);
+      return res.status(500).send("Error updating set");
     }
-
-    // Update the Set document
-    set.recordingRef = updatedRecordings;
-
-    // Update other fields if provided
-    const { setName, tuneIds, comments, links } = req.body;
-    if (setName) set.setName = setName;
-    if (tuneIds) set.tuneIds = JSON.parse(tuneIds); // Assuming tuneIds is a JSON stringified array
-    if (comments) set.comments = comments;
-    if (links) set.links = JSON.parse(links); // Assuming links is a JSON stringified array
-
-    await set.save();
-
-    return res.status(200).json({ message: "Set updated successfully", set });
-  } catch (error) {
-    console.error("Error updating set:", error);
-    return res.status(500).send("Error updating set");
-  }
+  });
 });
 
 // Deleting a Set
-app.delete("/api/sets/:id", async (req, res) => {
-  const { id } = req.params;
+// app.delete("/api/sets/:id", async (req, res) => {
+//   const { id } = req.params;
 
-  try {
-    const set = await Set.findOne({ setId: id });
-    if (!set) {
-      return res.status(404).send("Set not found");
-    }
+//   try {
+//     const set = await Set.findOne({ setId: id });
+//     if (!set) {
+//       return res.status(404).send("Set not found");
+//     }
 
-    if (
-      req.session &&
-      set.userId !== req.session.userId &&
-      !req.session.isAdmin
-    ) {
-      return res.status(403).send("Not authorized to delete this set!");
-    }
+//     if (
+//       req.session &&
+//       set.userId !== req.session.userId &&
+//       !req.session.isAdmin
+//     ) {
+//       return res.status(403).send("Not authorized to delete this set!");
+//     }
 
-    const recordingsDir = path.join(__dirname, "uploads", "sets", set.setId);
-    if (fs.existsSync(recordingsDir)) {
-      fs.readdirSync(recordingsDir).forEach((file) => {
-        fs.unlinkSync(path.join(recordingsDir, file));
-      });
-      fs.rmdirSync(recordingsDir);
-    }
+//     const recordingsDir = path.join(__dirname, "uploads", "sets", set.setId);
+//     if (fs.existsSync(recordingsDir)) {
+//       fs.readdirSync(recordingsDir).forEach((file) => {
+//         fs.unlinkSync(path.join(recordingsDir, file));
+//       });
+//       fs.rmdirSync(recordingsDir);
+//     }
 
-    await Set.deleteOne({ setId: id });
+//     await Set.deleteOne({ setId: id });
 
-    return res.status(200).send("Set deleted successfully");
-  } catch (error) {
-    console.error(error);
-    return res.status(500).send("Error deleting set");
-  }
-});
+//     return res.status(200).send("Set deleted successfully");
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).send("Error deleting set");
+//   }
+// });
 
 // Session
 

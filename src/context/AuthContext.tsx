@@ -1,6 +1,6 @@
 // AuthContext.tsx
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import Cookies from 'js-cookie';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import Cookies from "js-cookie";
 
 interface AuthContextType {
   isLoggedIn: boolean;
@@ -17,12 +17,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    const userCookie = Cookies.get('user');
-    console.log('useEffect ran, userCookie:', userCookie);
-    if (userCookie && userCookie !== undefined && userCookie !== '{}') {
+    const userCookie = Cookies.get("user");
+    if (userCookie && userCookie !== undefined && userCookie !== "{}") {
       setIsLoggedIn(true);
     } else {
-      Cookies.remove('user');
+      Cookies.remove("user");
       setIsLoggedIn(false);
     }
   }, []);
@@ -37,7 +36,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };

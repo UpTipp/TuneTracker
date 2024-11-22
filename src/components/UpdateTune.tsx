@@ -10,6 +10,9 @@ import {
 } from "flowbite-react";
 import ReactPlayer from "react-player";
 import { set } from "mongoose";
+import FileUploadSection from "./FileUploadSection";
+import LinksSection from "./LinksSection";
+import AudioRecorder from "./AudioRecorder";
 
 const UpdateTune = ({ type, itemId, tune, dataFetch }) => {
   // Modal Setup
@@ -61,6 +64,11 @@ const UpdateTune = ({ type, itemId, tune, dataFetch }) => {
       ) || []
     );
     setFileCommands(Array(tune.recordingRef.length).fill("keep"));
+    setFileURLs(
+      tune.recordingRef.filter(
+        (_, index) => fileCommands[index] !== "delete"
+      ) || []
+    );
   }
 
   // Updating Files and Links
@@ -117,6 +125,11 @@ const UpdateTune = ({ type, itemId, tune, dataFetch }) => {
     setFileCommands(newCommands);
   };
 
+  const handleRecordingComplete = (file: File, url: string) => {
+    setFiles((prevFiles) => [...prevFiles, file]);
+    setFileURLs((prevURLs) => [...prevURLs, url]);
+  };
+
   // Sending the Data
   const handleUpdateTune = async () => {
     const formData = new FormData();
@@ -150,7 +163,7 @@ const UpdateTune = ({ type, itemId, tune, dataFetch }) => {
 
       const result = await response.json();
       console.log("Success:", result);
-      await dataFetch(true);
+      dataFetch();
       setOpenModal(false);
       onCloseModal();
     } catch (error) {
@@ -272,85 +285,22 @@ const UpdateTune = ({ type, itemId, tune, dataFetch }) => {
               />
             </div>
 
-            {/* Links */}
-            <div>
-              <div className="mb-2 block">
-                <Label htmlFor="links" value="Link(s)" />
-              </div>
-              <div className="flex">
-                <TextInput
-                  id="linkInput"
-                  value={linkInput}
-                  onChange={(event) => setLinkInput(event.target.value)}
-                />
-                <Button onClick={addLink} className="ml-2">
-                  Add Link
-                </Button>
-              </div>
-              <ul className="mt-2">
-                {links.map((link, index) => (
-                  <li key={index} className="flex items-center">
-                    <span>{link}</span>
-                    <Button
-                      onClick={() => removeLink(index)}
-                      className="ml-2"
-                      size="xs"
-                      color="red"
-                    >
-                      Remove
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <LinksSection
+              links={links}
+              linkInput={linkInput}
+              onLinkInputChange={setLinkInput}
+              onAddLink={addLink}
+              onRemoveLink={removeLink}
+            />
 
-            {/* File Input */}
-            <div id="fileUpload" className="w-full">
-              <div className="mb-2 block">
-                <Label htmlFor="file" value="Upload file(s)" />
-              </div>
-              <FileInput
-                id="file"
-                name="recordings" // Ensure this matches the Multer field name
-                onChange={addFile}
-                helperText="Mp3, Mp4, etc. MAX (10 MB)"
-                multiple
-              />
-              <ul className="mt-2">
-                {fileURLs.map((url, index) => (
-                  <li key={index} className="flex items-center">
-                    <ReactPlayer
-                      url={url}
-                      controls
-                      width="75%"
-                      height="30px"
-                      className="ml-2"
-                    />
-                    {index < tune.recordingRef.length ? (
-                      <Select
-                        value={fileCommands[index]}
-                        onChange={(event) =>
-                          handleFileCommandChange(index, event.target.value)
-                        }
-                        className="ml-2"
-                      >
-                        <option value="keep">Keep</option>
-                        <option value="delete">Delete</option>
-                      </Select>
-                    ) : (
-                      <Button
-                        onClick={() => removeFile(index)}
-                        className="ml-2"
-                        size="xs"
-                        color="red"
-                      >
-                        Remove
-                      </Button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <AudioRecorder onRecordingComplete={handleRecordingComplete} />
+
+            <FileUploadSection
+              files={files}
+              fileURLs={fileURLs}
+              onFileAdd={addFile}
+              onFileRemove={removeFile}
+            />
 
             {/* Comments */}
             <div>

@@ -36,17 +36,19 @@ const Frame = ({
     <>
       <div className="min-h-screen w-full flex flex-col">
         <Header />
-        <main className="flex-grow">{children || ""}</main>
+        <main className="h-full flex-grow">
+          {children || ""}
+          {isVisible && (
+            <Button
+              className="fixed bottom-10 right-4 p-2 bg-blue-300 text-white rounded-full shadow-lg"
+              onClick={scrollToTop}
+            >
+              ↑
+            </Button>
+          )}
+        </main>
         <Footer />
       </div>
-      {isVisible && (
-        <Button
-          className="fixed bottom-4 right-4 p-2 bg-blue-300 text-white rounded-full shadow-lg"
-          onClick={scrollToTop}
-        >
-          ↑
-        </Button>
-      )}
     </>
   );
 };

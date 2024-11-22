@@ -1,10 +1,32 @@
-import { useState } from "react";
-import { Button, Textarea, Label, Modal, TextInput } from "flowbite-react";
-import { arrayMove, useSortable } from "@dnd-kit/sortable";
+import { useState, useEffect } from "react";
+import {
+  Button,
+  Textarea,
+  Select,
+  FileInput,
+  Label,
+  Modal,
+  TextInput,
+} from "flowbite-react";
+import ReactPlayer from "react-player";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { MdDragIndicator } from "react-icons/md";
 import SearchDropdown from "./SearchDropdown";
-import DraggableList from "./DraggableList";
 import FileUploadSection from "./FileUploadSection";
 import LinksSection from "./LinksSection";
 import AudioRecorder from "./AudioRecorder";
@@ -33,10 +55,7 @@ const SortableItem = ({ tune, onRemove }) => {
         <span className="ml-2">{tune.tuneName}</span>
       </div>
       <Button
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemove(tune.tuneId);
-        }}
+        onClick={() => onRemove(tune.tuneId)}
         className="ml-2"
         size="xs"
         color="red"
@@ -47,47 +66,137 @@ const SortableItem = ({ tune, onRemove }) => {
   );
 };
 
-const NewSet = ({ dataFetch, userTunes }) => {
+const UpdateSet = ({
+  type,
+  itemId,
+  set,
+  dataFetch,
+  userTunes,
+}: {
+  type: string;
+  itemId: string;
+  set: any;
+  dataFetch: () => void;
+  userTunes: Array<{ tuneId: string; tuneName: string }>;
+}) => {
   const [openModal, setOpenModal] = useState(false);
-
-  // Inputs
-  const [setName, setSetName] = useState("");
-  const [links, setLinks] = useState<string[]>([]);
+  const [setName, setSetName] = useState(set.setName);
+  const [links, setLinks] = useState<string[]>(set.links || []);
   const [linkInput, setLinkInput] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  const [comments, setComments] = useState("");
-  const [fileURLs, setFileURLs] = useState<string[]>([]);
-  const [tuneSearch, setTuneSearch] = useState("");
-  const [tunes, setTunes] = useState<{ tuneId: string; tuneName: string }[]>(
-    []
+  const [comments, setComments] = useState(set.creatorComments || "");
+  const [fileURLs, setFileURLs] = useState<string[]>(set.recordingRef || []);
+  const [fileCommands, setFileCommands] = useState<string[]>(
+    Array(set.recordingRef?.length || 0).fill("keep")
   );
+  const [tunes, setTunes] = useState(set.tunes || []);
+  const [tuneSearch, setTuneSearch] = useState("");
   const [filteredTunes, setFilteredTunes] = useState(userTunes);
   const [showDropdown, setShowDropdown] = useState(false);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   function onCloseModal() {
     setOpenModal(false);
-    setSetName("");
-    setLinks([]);
+    setSetName(set.setName);
+    setLinks(set.links || []);
     setLinkInput("");
     setFiles([]);
-    setComments("");
-    setFileURLs([]);
-    setTunes([]);
-    setTuneSearch("");
-    setFilteredTunes([]);
+    setComments(set.creatorComments || "");
+    setFileURLs(set.recordingRef || []);
+    setFileCommands(Array(set.recordingRef?.length || 0).fill("keep"));
+    setTunes(set.tunes || []);
   }
 
-  const addLink = () => {
-    if (linkInput.trim() !== "") {
-      setLinks([...links, linkInput.trim()]);
-      setLinkInput("");
+  // ... Similar file handling methods as UpdateTune ...
+
+  const handleUpdateSet = async () => {
+    const formData = new FormData();
+    formData.append("setName", setName);
+    formData.append("comments", comments);
+    formData.append("fileCommands", JSON.stringify(fileCommands));
+    links.forEach((link, index) => {
+      formData.append(`links[${index}]`, link);
+    });
+    files.forEach((file) => {
+      formData.append("recordings", file);
+    });
+    tunes.forEach((tune, index) => {
+      formData.append(`tunes[${index}]`, tune.tuneId);
+    });
+
+    try {
+      const response = await fetch(`/api/sets/${itemId}`, {
+        method: "PUT",
+        body: formData,
+        credentials: "include",
+      });
+
+      if (!response.ok) throw new Error("Network response was not ok");
+
+      const result = await response.json();
+      console.log("Success:", result);
+      dataFetch();
+      onCloseModal();
+    } catch (error) {
+      console.error("Error:", error);
     }
   };
 
-  const removeLink = (index: number) => {
-    setLinks(links.filter((_, i) => i !== index));
+  const handleTuneSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const searchValue = event.target.value;
+    setTuneSearch(searchValue);
+    setShowDropdown(true);
+    const query = searchValue.toLowerCase();
+
+    // Filter from userTunes instead of a separate tunes array
+    const availableTunes = userTunes.filter(
+      (tune) => !tunes.some((addedTune) => addedTune.tuneId === tune.tuneId)
+    );
+
+    if (query.trim() === "") {
+      setFilteredTunes(availableTunes);
+    } else {
+      const filtered = availableTunes.filter((tune) =>
+        tune.tuneName.toLowerCase().includes(query)
+      );
+      setFilteredTunes(filtered);
+    }
   };
 
+  const handleInputBlur = () => {
+    setTimeout(() => {
+      setShowDropdown(false);
+    }, 200);
+  };
+
+  const addTune = (tune: { tuneId: string; tuneName: string }) => {
+    setTunes([...tunes, tune]);
+    setTuneSearch("");
+    setFilteredTunes([]);
+  };
+
+  const removeTune = (tuneId: string) => {
+    setTunes(tunes.filter((tune) => tune.tuneId !== tuneId));
+  };
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    if (active.id !== over.id) {
+      setTunes((items) => {
+        const oldIndex = items.findIndex((item) => item.tuneId === active.id);
+        const newIndex = items.findIndex((item) => item.tuneId === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
+  // File handling methods
   const addFile = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
       const newFiles = Array.from(event.target.files);
@@ -101,109 +210,33 @@ const NewSet = ({ dataFetch, userTunes }) => {
         };
       });
     }
-    event.target.value = ""; // Clear the input value to allow re-uploading the same file
+    event.target.value = "";
   };
 
   const removeFile = (index: number) => {
-    setFiles(files.filter((_, i) => i !== index));
-    setFileURLs(fileURLs.filter((_, i) => i !== index));
-  };
-
-  const handleTuneSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const searchValue = event.target.value;
-    setTuneSearch(searchValue);
-    setShowDropdown(true);
-    const query = searchValue.toLowerCase();
-
-    // Filter tunes that haven't already been added
-    const availableTunes = userTunes.filter(
-      (tune) => !tunes.some((addedTune) => addedTune.tuneId === tune.tuneId)
-    );
-
-    // Show all available tunes if query is empty, otherwise filter by name
-    if (query.trim() === "") {
-      setFilteredTunes(availableTunes);
+    if (index < (set.recordingRef?.length || 0)) {
+      const newCommands = [...fileCommands];
+      newCommands[index] = "delete";
+      setFileCommands(newCommands);
+      setFileURLs(fileURLs.filter((_, i) => i !== index));
     } else {
-      const filtered = availableTunes.filter((tune) =>
-        tune.tuneName.toLowerCase().includes(query)
-      );
-      setFilteredTunes(filtered);
+      const newIndex = index - (set.recordingRef?.length || 0);
+      setFiles(files.filter((_, i) => i !== newIndex));
+      setFileURLs(fileURLs.filter((_, i) => i !== index));
     }
   };
 
-  const handleInputBlur = () => {
-    // Small delay to allow click events on dropdown items to fire
-    setTimeout(() => {
-      setShowDropdown(false);
-    }, 200);
-  };
-
-  const addTune = (tune: { tuneId: string; tuneName: string }) => {
-    setTunes([...tunes, tune]);
-    setTuneSearch("");
-    setFilteredTunes([]);
-  };
-
-  const removeTune = (tuneId: string) => {
-    console.log(tuneId);
-    // Changed parameter from index to tuneId
-    setTunes(tunes.filter((tune) => tune.tuneId !== tuneId));
-  };
-
-  const handleDragEnd = (event) => {
-    const { active, over } = event;
-
-    if (active.id !== over.id) {
-      setTunes((items) => {
-        const oldIndex = items.findIndex((item) => item.tuneId === active.id);
-        const newIndex = items.findIndex((item) => item.tuneId === over.id);
-
-        return arrayMove(items, oldIndex, newIndex);
-      });
+  const addLink = () => {
+    if (linkInput.trim() !== "") {
+      setLinks([...links, linkInput.trim()]);
+      setLinkInput("");
     }
   };
 
-  async function onAddSet() {
-    const formData = new FormData();
-    formData.append("setName", setName);
-    formData.append("comments", comments);
-    links.forEach((link, index) => {
-      formData.append(`links[${index}]`, link);
-    });
-    files.forEach((file, index) => {
-      formData.append(`recordings`, file);
-    });
-    tunes.forEach((tune, index) => {
-      formData.append(`tunes[${index}]`, tune.tuneId);
-    });
+  const removeLink = (index: number) => {
+    setLinks(links.filter((_, i) => i !== index));
+  };
 
-    console.log(formData);
-
-    try {
-      const response = await fetch("/api/sets", {
-        method: "POST",
-        body: formData,
-        headers: {
-          // Ensure the server interprets the request correctly
-          Accept: "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-
-      const result = await response.json();
-      console.log("Success:", result);
-      dataFetch();
-      setOpenModal(false);
-      onCloseModal();
-    } catch (error) {
-      console.error("Error:", error);
-    }
-  }
-
-  // Add this new function to check form validity
   const isFormValid = () => {
     return setName.trim() !== "" && tunes.length >= 2;
   };
@@ -215,18 +248,15 @@ const NewSet = ({ dataFetch, userTunes }) => {
 
   return (
     <>
-      <Button
-        className="bg-blue-400 ml-2 mr-2"
-        onClick={() => setOpenModal(true)}
-      >
-        Add Set
+      <Button className="bg-blue-400" onClick={() => setOpenModal(true)}>
+        Update {String(type).charAt(0).toUpperCase() + String(type).slice(1)}
       </Button>
       <Modal show={openModal} size="xl" onClose={onCloseModal} popup>
         <Modal.Header />
         <Modal.Body>
           <div className="space-y-6">
             <h3 className="text-xl font-medium text-gray-900 dark:text-white">
-              Add a Set!
+              Editing Set
             </h3>
 
             {/* Set Name */}
@@ -276,15 +306,29 @@ const NewSet = ({ dataFetch, userTunes }) => {
               placeholder="Type to search tunes..."
             />
 
-            <DraggableList
-              items={tunes.map((tune) => ({
-                id: tune.tuneId,
-                name: tune.tuneName,
-              }))}
-              label="Selected Tunes:"
-              onDragEnd={handleDragEnd}
-              onRemove={removeTune}
-            />
+            <div className="mt-4">
+              <Label value="Selected Tunes:" />
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={tunes.map((tune) => tune.tuneId)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="mt-2">
+                    {tunes.map((tune) => (
+                      <SortableItem
+                        key={tune.tuneId}
+                        tune={tune}
+                        onRemove={() => removeTune(tune.tuneId)}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            </div>
 
             {/* Comments */}
             <div>
@@ -299,12 +343,14 @@ const NewSet = ({ dataFetch, userTunes }) => {
                 rows={4}
               />
             </div>
+
+            {/* Update Button */}
             <div className="w-full justify-center">
               {isFormValid() ? (
-                <Button onClick={onAddSet}>Add Set</Button>
+                <Button onClick={handleUpdateSet}>Update Set</Button>
               ) : (
-                <Button disabled onClick={onAddSet}>
-                  Add Set
+                <Button disabled onClick={handleUpdateSet}>
+                  Update Set
                 </Button>
               )}
             </div>
@@ -315,4 +361,4 @@ const NewSet = ({ dataFetch, userTunes }) => {
   );
 };
 
-export default NewSet;
+export default UpdateSet;

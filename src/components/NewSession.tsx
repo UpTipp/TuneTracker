@@ -1,57 +1,17 @@
 import { useState } from "react";
 import { Button, Textarea, Label, Modal, TextInput } from "flowbite-react";
-import { arrayMove, useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { MdDragIndicator } from "react-icons/md";
+import { arrayMove } from "@dnd-kit/sortable";
 import SearchDropdown from "./SearchDropdown";
 import DraggableList from "./DraggableList";
 import FileUploadSection from "./FileUploadSection";
 import LinksSection from "./LinksSection";
 import AudioRecorder from "./AudioRecorder";
 
-const SortableItem = ({ tune, onRemove }) => {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: tune.tuneId });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="flex items-center p-2 bg-gray-50 dark:bg-gray-800 mb-1 rounded"
-    >
-      <div
-        className="flex items-center flex-grow cursor-move"
-        {...attributes}
-        {...listeners}
-      >
-        <MdDragIndicator />
-        <span className="ml-2">{tune.tuneName}</span>
-      </div>
-      <Button
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemove(tune.tuneId);
-        }}
-        className="ml-2"
-        size="xs"
-        color="red"
-      >
-        Remove
-      </Button>
-    </div>
-  );
-};
-
-const NewSet = ({ dataFetch, userTunes }) => {
+const NewSession = ({ dataFetch, userTunes, userSets }) => {
   const [openModal, setOpenModal] = useState(false);
 
   // Inputs
-  const [setName, setSetName] = useState("");
+  const [sessionName, setSessionName] = useState("");
   const [links, setLinks] = useState<string[]>([]);
   const [linkInput, setLinkInput] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -64,9 +24,14 @@ const NewSet = ({ dataFetch, userTunes }) => {
   const [filteredTunes, setFilteredTunes] = useState(userTunes);
   const [showDropdown, setShowDropdown] = useState(false);
 
+  const [setSearch, setSetSearch] = useState("");
+  const [sets, setSets] = useState<{ setId: string; setName: string }[]>([]);
+  const [filteredSets, setFilteredSets] = useState(userSets);
+  const [showSetDropdown, setShowSetDropdown] = useState(false);
+
   function onCloseModal() {
     setOpenModal(false);
-    setSetName("");
+    setSessionName("");
     setLinks([]);
     setLinkInput("");
     setFiles([]);
@@ -75,6 +40,9 @@ const NewSet = ({ dataFetch, userTunes }) => {
     setTunes([]);
     setTuneSearch("");
     setFilteredTunes([]);
+    setSets([]);
+    setSetSearch("");
+    setFilteredSets([]);
   }
 
   const addLink = () => {
@@ -131,10 +99,31 @@ const NewSet = ({ dataFetch, userTunes }) => {
     }
   };
 
+  const handleSetSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const searchValue = event.target.value;
+    setSetSearch(searchValue);
+    setShowSetDropdown(true);
+    const query = searchValue.toLowerCase();
+
+    const availableSets = userSets.filter(
+      (set) => !sets.some((addedSet) => addedSet.setId === set.setId)
+    );
+
+    if (query.trim() === "") {
+      setFilteredSets(availableSets);
+    } else {
+      const filtered = availableSets.filter((set) =>
+        set.setName.toLowerCase().includes(query)
+      );
+      setFilteredSets(filtered);
+    }
+  };
+
   const handleInputBlur = () => {
     // Small delay to allow click events on dropdown items to fire
     setTimeout(() => {
       setShowDropdown(false);
+      setShowSetDropdown(false);
     }, 200);
   };
 
@@ -144,10 +133,18 @@ const NewSet = ({ dataFetch, userTunes }) => {
     setFilteredTunes([]);
   };
 
+  const addSet = (set: { setId: string; setName: string }) => {
+    setSets([...sets, set]);
+    setSetSearch("");
+    setFilteredSets([]);
+  };
+
   const removeTune = (tuneId: string) => {
-    console.log(tuneId);
-    // Changed parameter from index to tuneId
     setTunes(tunes.filter((tune) => tune.tuneId !== tuneId));
+  };
+
+  const removeSet = (setId: string) => {
+    setSets(sets.filter((set) => set.setId !== setId));
   };
 
   const handleDragEnd = (event) => {
@@ -163,9 +160,14 @@ const NewSet = ({ dataFetch, userTunes }) => {
     }
   };
 
-  async function onAddSet() {
+  const handleRecordingComplete = (file: File, url: string) => {
+    setFiles((prevFiles) => [...prevFiles, file]);
+    setFileURLs((prevURLs) => [...prevURLs, url]);
+  };
+
+  async function onAddSession() {
     const formData = new FormData();
-    formData.append("setName", setName);
+    formData.append("sessionName", sessionName);
     formData.append("comments", comments);
     links.forEach((link, index) => {
       formData.append(`links[${index}]`, link);
@@ -176,15 +178,15 @@ const NewSet = ({ dataFetch, userTunes }) => {
     tunes.forEach((tune, index) => {
       formData.append(`tunes[${index}]`, tune.tuneId);
     });
-
-    console.log(formData);
+    sets.forEach((set, index) => {
+      formData.append(`sets[${index}]`, set.setId);
+    });
 
     try {
-      const response = await fetch("/api/sets", {
+      const response = await fetch("/api/sessions", {
         method: "POST",
         body: formData,
         headers: {
-          // Ensure the server interprets the request correctly
           Accept: "application/json",
         },
       });
@@ -203,14 +205,8 @@ const NewSet = ({ dataFetch, userTunes }) => {
     }
   }
 
-  // Add this new function to check form validity
   const isFormValid = () => {
-    return setName.trim() !== "" && tunes.length >= 2;
-  };
-
-  const handleRecordingComplete = (file: File, url: string) => {
-    setFiles((prevFiles) => [...prevFiles, file]);
-    setFileURLs((prevURLs) => [...prevURLs, url]);
+    return sessionName.trim() !== "" && tunes.length + sets.length >= 2;
   };
 
   return (
@@ -219,25 +215,25 @@ const NewSet = ({ dataFetch, userTunes }) => {
         className="bg-blue-400 ml-2 mr-2"
         onClick={() => setOpenModal(true)}
       >
-        Add Set
+        Add Session
       </Button>
       <Modal show={openModal} size="xl" onClose={onCloseModal} popup>
         <Modal.Header />
         <Modal.Body>
           <div className="space-y-6">
             <h3 className="text-xl font-medium text-gray-900 dark:text-white">
-              Add a Set!
+              Add a Session!
             </h3>
 
-            {/* Set Name */}
+            {/* Session Name */}
             <div>
               <div className="mb-2 block">
-                <Label htmlFor="setName" value="Set Name" />
+                <Label htmlFor="sessionName" value="Session Name" />
               </div>
               <TextInput
-                id="setName"
-                value={setName}
-                onChange={(event) => setSetName(event.target.value)}
+                id="sessionName"
+                value={sessionName}
+                onChange={(event) => setSessionName(event.target.value)}
                 required
               />
             </div>
@@ -286,6 +282,30 @@ const NewSet = ({ dataFetch, userTunes }) => {
               onRemove={removeTune}
             />
 
+            <SearchDropdown
+              label="Search Sets"
+              searchValue={setSearch}
+              onSearchChange={handleSetSearch}
+              onBlur={handleInputBlur}
+              onFocus={() => setShowSetDropdown(true)}
+              showDropdown={showSetDropdown}
+              items={filteredSets.map((set) => ({
+                id: set.setId,
+                name: set.setName,
+              }))}
+              onItemSelect={(item) =>
+                addSet({ setId: item.id, setName: item.name })
+              }
+              placeholder="Type to search sets..."
+            />
+
+            <DraggableList
+              items={sets.map((set) => ({ id: set.setId, name: set.setName }))}
+              label="Selected Sets:"
+              onDragEnd={handleDragEnd}
+              onRemove={removeSet}
+            />
+
             {/* Comments */}
             <div>
               <div className="mb-2 block">
@@ -301,10 +321,10 @@ const NewSet = ({ dataFetch, userTunes }) => {
             </div>
             <div className="w-full justify-center">
               {isFormValid() ? (
-                <Button onClick={onAddSet}>Add Set</Button>
+                <Button onClick={onAddSession}>Add Session</Button>
               ) : (
-                <Button disabled onClick={onAddSet}>
-                  Add Set
+                <Button disabled onClick={onAddSession}>
+                  Add Session
                 </Button>
               )}
             </div>
@@ -315,4 +335,4 @@ const NewSet = ({ dataFetch, userTunes }) => {
   );
 };
 
-export default NewSet;
+export default NewSession;
