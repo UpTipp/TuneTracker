@@ -55,7 +55,7 @@ This will host the list of tunes created by the users.
 - tuneName (NN): name of the tune
 - tuneType (NN): type of tune (jig, reel, hornpipe, etc.)
 - author: author of the tune
-- recordingRef: a reference to the recording for the tune
+- recordingRef: array reference to the recording for the tune
   (stored in a folder on the server)
 - links: array of links appropraite for the tune
 - comments: allows user to write feelings/ideas
@@ -69,8 +69,9 @@ Sets hold 2 - n amount of tunes, and are created by users.
 - setName: name of the set
 - tuneIds (FK, NN): array of tuneIds referencing different tunes
   (order is important)
-- recordingRef: a reference to the recording for the tune
+- recordingRef: array reference to the recording for the tune
   (stored in a folder on the server)
+- links: array of links appropraite for the tune  
 - comments: allows user to write feelings/ideas
 
 ## Sessions
@@ -82,4 +83,7 @@ Sessions hold sets and tunes, and are created by users.
 - sessionName: name of the session
 - tuneIds (FK, NN): array of tuneIds referencing different tunes
 - setIds (FK, NN): array of setIds referencing different sets
+- recordingRef: array reference to the recording for the tune
+  (stored in a folder on the server)
+- links: array of links appropraite for the tune
 - comments: allows user to write feelings/ideas
