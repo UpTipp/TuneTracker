@@ -18,10 +18,10 @@ const LoginButton = () => {
       credentials: "include",
     }).then((response) => {
       Cookies.remove("user");
+      setIsLoggedIn(false);
       if (!response.ok) {
         console.error("Logout failed server side!");
       }
-      setIsLoggedIn(false);
     });
     window.location.reload();
   };
