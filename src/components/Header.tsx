@@ -1,13 +1,13 @@
 // Header.tsx
-import React from "react";
+
 import { useEffect, useState, useRef } from "react";
 import LogoIcon from "../logo.svg";
 import { Navbar } from "flowbite-react";
 import LoginButton from "./LoginButton";
 import Cookies from "js-cookie";
 import { useAuth } from "../context/AuthContext";
-import { use } from "passport";
-import "../styles/header.css";
+
+import "../styles/Header.css";
 
 const Header = () => {
   const { isLoggedIn, setIsLoggedIn } = useAuth();
