@@ -389,8 +389,18 @@ app.use((req, res, next) => {
   next();
 });
 
-// Update auth checking middleware to only use req.user
+// Update auth checking middleware to only protect specific routes
 app.use("/api/*", (req, res, next) => {
+  // Skip auth check for public routes
+  if (
+    req.method === "GET" &&
+    (req.path === "/api/users-top" ||
+      req.path === "/api/users-new" ||
+      req.path === "/api/tunes-new")
+  ) {
+    return next();
+  }
+
   const user = req.user as IUser;
   console.log("Auth check:", {
     user: user,
