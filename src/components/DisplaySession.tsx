@@ -65,7 +65,7 @@ const DisplaySession = ({ session, userId, dataFetch, goTo, itemMemory }) => {
     <Card
       onClick={hasBackContent ? handleCardClick : undefined}
       theme={customCard}
-      id={"se:" + session.sessionId}
+      id={"sn:" + session.sessionId}
       className="w-full max-w-lg border-2 hover:border-blue-400 flex flex-col justify-between"
     >
       {isFlipped ? (

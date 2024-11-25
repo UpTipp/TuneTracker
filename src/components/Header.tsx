@@ -50,7 +50,7 @@ const Header = () => {
               href={"/user/" + userID.current}
               className="hover:text-blue-500 md:hover:text-blue-500"
             >
-              User
+              Profile
             </Navbar.Link>
           ) : (
             ""
@@ -59,7 +59,7 @@ const Header = () => {
             href="/dashboard"
             className="hover:text-blue-500 md:hover:text-blue-500"
           >
-            Tunes
+            Dashboard
           </Navbar.Link>
           <Navbar.Link
             href="/about"

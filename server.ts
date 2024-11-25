@@ -370,25 +370,9 @@ app.get("/logout", (req, res) => {
   });
 });
 
-// Users
-app.get("/api/users/:id", async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const user = await User.findOne({ userId: id });
-
-    if (user) {
-      return res.status(200).json(JSON.stringify(user));
-    } else {
-      return res.status(404).send("User not found");
-    }
-  } catch (error) {
-    console.error(error);
-    return res.status(500).send("Error retrieving user");
-  }
-});
-
-app.get("/api/users/top", async (req, res) => {
+// Stats Routes
+// Top Users
+app.get("/api/users-top", async (req, res) => {
   try {
     const topUsers = await User.aggregate([
       {
@@ -425,6 +409,70 @@ app.get("/api/users/top", async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).send("Error retrieving top users");
+  }
+});
+
+// New Users
+app.get("/api/users-new", async (req, res) => {
+  try {
+    const newUsers = await User.find()
+      .sort({ dateAdded: -1 })
+      .limit(10)
+      .select("userId firstName lastName picture dateAdded");
+
+    return res.status(200).json(newUsers);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send("Error retrieving new users");
+  }
+});
+
+// New Tunes
+app.get("/api/tunes-new", async (req, res) => {
+  try {
+    const newTunes = await Tune.find()
+      .sort({ dateAdded: -1 })
+      .limit(10)
+      .select("tuneId tuneName userId tuneType dateAdded");
+
+    // Get user details for each tune
+    const tunesWithUserDetails = await Promise.all(
+      newTunes.map(async (tune) => {
+        const user = await User.findOne({ userId: tune.userId }).select(
+          "firstName lastName"
+        );
+        return {
+          ...tune.toObject(),
+          userId: tune?.userId,
+          firstName: user?.firstName,
+          lastName: user?.lastName,
+        };
+      })
+    );
+
+    return res.status(200).json(tunesWithUserDetails);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send("Error retrieving new tunes");
+  }
+});
+
+// User Continued
+// Single User
+app.get("/api/users/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const user = await User.findOne({ userId: id });
+
+    if (user) {
+      return res.status(200).json(JSON.stringify(user));
+    } else {
+      return res.status(404).send("User not found");
+    }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send("Error retrieving user");
   }
 });
 
