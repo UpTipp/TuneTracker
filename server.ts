@@ -64,11 +64,16 @@ app.use(
   session({
     secret: secret,
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false, // Changed to false for better security
     cookie: {
       maxAge: 24 * 60 * 60 * 1000, // 1 day expiration for session cookies
       secure: process.env.NODE_ENV === "production", // Set to true in production (https only)
       httpOnly: true,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Allow cross-site cookies in production
+      domain:
+        process.env.NODE_ENV === "production"
+          ? ".charlescrossan.com"
+          : undefined, // Set domain in production
     },
     store: sessionStore,
   })
@@ -78,7 +83,15 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // Use CORS middleware
-app.use(cors());
+app.use(
+  cors({
+    origin:
+      process.env.NODE_ENV === "production"
+        ? "https://music.charlescrossan.com"
+        : "http://localhost:3000",
+    credentials: true,
+  })
+);
 
 // Serve static files from the 'build' directory
 app.use("/", express.static(path.join(__dirname, "./build")));
@@ -329,7 +342,11 @@ app.get(
     res.cookie("user", JSON.stringify(userInfo), {
       secure: process.env.NODE_ENV === "production",
       expires: sessionExpiration,
-      sameSite: "lax",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      domain:
+        process.env.NODE_ENV === "production"
+          ? ".charlescrossan.com"
+          : undefined,
     });
     // Send a JSON response with additional information
     res.status(200).redirect("/user/" + req.session.userId);
