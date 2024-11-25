@@ -2,7 +2,7 @@ FROM node:18
 
 WORKDIR /usr/src/app
 
-# Copy package files first
+# Copy package files
 COPY package*.json ./
 
 # Install dependencies
@@ -11,16 +11,20 @@ RUN npm install
 # Copy the rest of the application
 COPY . .
 
-# Install tsx globally
-RUN npm install -g tsx
+# Fix potential file permissions
+RUN chmod -R 777 .
 
-# Create upload directories
-RUN mkdir -p uploads/tunes uploads/sets uploads/sessions
+# Set build environment variables
+ENV CI=false
+ENV NODE_ENV=production
 
 # Build the React app
 RUN npm run build
 
+# Create upload directories
+RUN mkdir -p uploads/tunes uploads/sets uploads/sessions
+
 EXPOSE 3001
 
-# Start using tsx
-CMD ["tsx", "server.ts"]
+# Start the server
+CMD ["npm", "run", "start:prod"]
