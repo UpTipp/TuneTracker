@@ -32,8 +32,24 @@ const FileUploadSection = ({
             <ReactPlayer
               url={url}
               controls
-              width="80%"
-              height="30px"
+              playsinline
+              style={{ width: "80%", height: "30px" }}
+              width="100%"
+              height="100%"
+              config={{
+                file: {
+                  attributes: {
+                    controlsList: "nodownload",
+                    playsInline: true,
+                  },
+                  forceAudio: true,
+                },
+              }}
+              fallback={
+                <audio controls src={url} className="w-full">
+                  Your browser does not support the audio element.
+                </audio>
+              }
               className="ml-2"
             />
             <Button

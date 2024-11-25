@@ -8,6 +8,7 @@ import {
   Dropdown,
   Checkbox,
   TextInput,
+  Accordion,
 } from "flowbite-react";
 import Cookies from "js-cookie";
 import Frame from "../components/Frame";
@@ -18,6 +19,7 @@ import DisplayTune from "../components/DisplayTune";
 import DisplaySet from "../components/DisplaySet";
 import DisplaySession from "../components/DisplaySession";
 import { useUserData } from "../hooks/useUserData";
+import { HiPlus } from "react-icons/hi";
 
 // Add these types at the top of the file, after imports
 type TimeframeFilter = {
@@ -72,6 +74,207 @@ const FilterCheckbox = ({
     {label}
   </Dropdown.Item>
 );
+
+const ActionButtons = ({
+  onPracticeOldest,
+  onRandomPractice,
+  showDropdown = false,
+}: {
+  onPracticeOldest: () => void;
+  onRandomPractice: () => void;
+  showDropdown?: boolean;
+}) => {
+  if (showDropdown) {
+    return (
+      <Dropdown label="Actions">
+        <Dropdown.Item onClick={onPracticeOldest}>
+          Practice Oldest
+        </Dropdown.Item>
+        <Dropdown.Item onClick={onRandomPractice}>
+          Random Practice
+        </Dropdown.Item>
+      </Dropdown>
+    );
+  }
+
+  return (
+    <>
+      <Button onClick={onPracticeOldest}>Practice Oldest</Button>
+      <Button onClick={onRandomPractice}>Random Practice</Button>
+    </>
+  );
+};
+
+const FilterButtons = ({
+  type,
+  sortBy,
+  setSortBy,
+  filterBy,
+  handleCheckboxClick,
+  resetFilters,
+  showDropdown = false,
+}: {
+  type: string;
+  sortBy: any;
+  setSortBy: (fn: (prev: any) => any) => void;
+  filterBy: any;
+  handleCheckboxClick: any;
+  resetFilters: (type: string) => void;
+  showDropdown?: boolean;
+}) => {
+  const content = (
+    <>
+      <Dropdown label="Sort By">
+        <Dropdown.Item
+          onClick={() => setSortBy((prev) => ({ ...prev, [type]: "name" }))}
+        >
+          Name
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => setSortBy((prev) => ({ ...prev, [type]: "newest" }))}
+        >
+          Newest
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => setSortBy((prev) => ({ ...prev, [type]: "oldest" }))}
+        >
+          Oldest
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() =>
+            setSortBy((prev) => ({ ...prev, [type]: "lastPracticed" }))
+          }
+        >
+          Last Practiced
+        </Dropdown.Item>
+      </Dropdown>
+      <Dropdown label="Filter By" dismissOnClick={false}>
+        <div className="max-h-96 overflow-y-auto">
+          <FilterCheckbox
+            label="All Time"
+            checked={
+              type === "tunes"
+                ? filterBy.tunes.timeframe.all
+                : filterBy[type].all
+            }
+            onChange={handleCheckboxClick(
+              type,
+              type === "tunes" ? "timeframe" : null,
+              "all"
+            )}
+          />
+          <FilterCheckbox
+            label="Last Week"
+            checked={
+              type === "tunes"
+                ? filterBy.tunes.timeframe.week
+                : filterBy[type].week
+            }
+            onChange={handleCheckboxClick(
+              type,
+              type === "tunes" ? "timeframe" : null,
+              "week"
+            )}
+          />
+          <FilterCheckbox
+            label="Last Month"
+            checked={
+              type === "tunes"
+                ? filterBy.tunes.timeframe.month
+                : filterBy[type].month
+            }
+            onChange={handleCheckboxClick(
+              type,
+              type === "tunes" ? "timeframe" : null,
+              "month"
+            )}
+          />
+          <FilterCheckbox
+            label="Unpracticed"
+            checked={
+              type === "tunes"
+                ? filterBy.tunes.timeframe.unpracticed
+                : filterBy[type].unpracticed
+            }
+            onChange={handleCheckboxClick(
+              type,
+              type === "tunes" ? "timeframe" : null,
+              "unpracticed"
+            )}
+          />
+
+          {type === "tunes" && (
+            <>
+              <Dropdown.Divider />
+              <Dropdown.Header>Tune Type</Dropdown.Header>
+              <FilterCheckbox
+                label="All Types"
+                checked={filterBy.tunes.type.all}
+                onChange={handleCheckboxClick("tunes", "type", "all")}
+              />
+              <FilterCheckbox
+                label="Reel"
+                checked={filterBy.tunes.type.reel}
+                onChange={handleCheckboxClick("tunes", "type", "reel")}
+              />
+              <FilterCheckbox
+                label="Jig"
+                checked={filterBy.tunes.type.jig}
+                onChange={handleCheckboxClick("tunes", "type", "jig")}
+              />
+              <FilterCheckbox
+                label="Hornpipe"
+                checked={filterBy.tunes.type.hornpipe}
+                onChange={handleCheckboxClick("tunes", "type", "hornpipe")}
+              />
+              <FilterCheckbox
+                label="Slip Jig"
+                checked={filterBy.tunes.type["slip jig"]}
+                onChange={handleCheckboxClick("tunes", "type", "slip jig")}
+              />
+              <FilterCheckbox
+                label="Polka"
+                checked={filterBy.tunes.type.polka}
+                onChange={handleCheckboxClick("tunes", "type", "polka")}
+              />
+              <FilterCheckbox
+                label="Slide"
+                checked={filterBy.tunes.type.slide}
+                onChange={handleCheckboxClick("tunes", "type", "slide")}
+              />
+              <FilterCheckbox
+                label="Waltz"
+                checked={filterBy.tunes.type.waltz}
+                onChange={handleCheckboxClick("tunes", "type", "waltz")}
+              />
+              <FilterCheckbox
+                label="Mazurka"
+                checked={filterBy.tunes.type.mazurka}
+                onChange={handleCheckboxClick("tunes", "type", "mazurka")}
+              />
+              <FilterCheckbox
+                label="Other"
+                checked={filterBy.tunes.type.other}
+                onChange={handleCheckboxClick("tunes", "type", "other")}
+              />
+            </>
+          )}
+        </div>
+      </Dropdown>
+      <Button onClick={() => resetFilters(type)}>Reset</Button>
+    </>
+  );
+
+  if (showDropdown) {
+    return (
+      <Dropdown label="Filters & Sort">
+        <Dropdown.Item>{content}</Dropdown.Item>
+      </Dropdown>
+    );
+  }
+
+  return content;
+};
 
 const User = () => {
   const { id } = useParams();
@@ -570,7 +773,9 @@ const User = () => {
           <Tabs.Item active title="Tunes">
             <div className="flex flex-row justify-between w-full gap-4 flex-wrap">
               <div className="flex items-center gap-2">
-                <NewTune dataFetch={triggerDataFetch} />
+                {id === userId.current && (
+                  <NewTune dataFetch={triggerDataFetch} />
+                )}
                 <TextInput
                   type="text"
                   placeholder="Search tunes..."
@@ -580,159 +785,226 @@ const User = () => {
                   }
                 />
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={() => practiceOldest(tunes, "tune")}
-                  className="ml-2"
-                >
-                  Practice Oldest
-                </Button>
-                <Button
-                  onClick={() => randomPractice(tunes, "tune")}
-                  className="ml-2"
-                >
-                  Random Practice
-                </Button>
+
+              {/* Show different layouts based on screen size */}
+              <div className="hidden md:flex items-center gap-2">
+                <ActionButtons
+                  onPracticeOldest={() => practiceOldest(tunes, "tune")}
+                  onRandomPractice={() => randomPractice(tunes, "tune")}
+                />
+                <FilterButtons
+                  type="tunes"
+                  sortBy={sortBy}
+                  setSortBy={setSortBy}
+                  filterBy={filterBy}
+                  handleCheckboxClick={handleCheckboxClick}
+                  resetFilters={resetFilters}
+                />
               </div>
-              <div className="flex items-center gap-2">
-                <Dropdown label="Sort By" className="ml-2">
-                  <Dropdown.Item
-                    onClick={() =>
-                      setSortBy((prev) => ({ ...prev, tunes: "name" }))
-                    }
-                  >
-                    Name
-                  </Dropdown.Item>
-                  <Dropdown.Item
-                    onClick={() =>
-                      setSortBy((prev) => ({ ...prev, tunes: "newest" }))
-                    }
-                  >
-                    Newest
-                  </Dropdown.Item>
-                  <Dropdown.Item
-                    onClick={() =>
-                      setSortBy((prev) => ({ ...prev, tunes: "oldest" }))
-                    }
-                  >
-                    Oldest
-                  </Dropdown.Item>
-                  <Dropdown.Item
-                    onClick={() =>
-                      setSortBy((prev) => ({ ...prev, tunes: "lastPracticed" }))
-                    }
-                  >
-                    Last Practiced
-                  </Dropdown.Item>
-                </Dropdown>
-                <Dropdown
-                  label="Filter By"
-                  className="ml-2"
-                  dismissOnClick={false}
-                >
-                  <div className="max-h-96 overflow-y-auto">
-                    <Dropdown.Header>Time Frame</Dropdown.Header>
-                    <FilterCheckbox
-                      label="All Time"
-                      checked={filterBy.tunes.timeframe.all}
-                      onChange={handleCheckboxClick(
-                        "tunes",
-                        "timeframe",
-                        "all"
-                      )}
-                    />
-                    <FilterCheckbox
-                      label="Last Week"
-                      checked={filterBy.tunes.timeframe.week}
-                      onChange={handleCheckboxClick(
-                        "tunes",
-                        "timeframe",
-                        "week"
-                      )}
-                    />
-                    <FilterCheckbox
-                      label="Last Month"
-                      checked={filterBy.tunes.timeframe.month}
-                      onChange={handleCheckboxClick(
-                        "tunes",
-                        "timeframe",
-                        "month"
-                      )}
-                    />
-                    <FilterCheckbox
-                      label="Unpracticed"
-                      checked={filterBy.tunes.timeframe.unpracticed}
-                      onChange={handleCheckboxClick(
-                        "tunes",
-                        "timeframe",
-                        "unpracticed"
-                      )}
-                    />
-                    <Dropdown.Divider />
-                    <Dropdown.Header>Tune Type</Dropdown.Header>
-                    <FilterCheckbox
-                      label="All Types"
-                      checked={filterBy.tunes.type.all}
-                      onChange={handleCheckboxClick("tunes", "type", "all")}
-                    />
-                    <FilterCheckbox
-                      label="Reel"
-                      checked={filterBy.tunes.type.reel}
-                      onChange={handleCheckboxClick("tunes", "type", "reel")}
-                    />
-                    <FilterCheckbox
-                      label="Jig"
-                      checked={filterBy.tunes.type.jig}
-                      onChange={handleCheckboxClick("tunes", "type", "jig")}
-                    />
-                    <FilterCheckbox
-                      label="Hornpipe"
-                      checked={filterBy.tunes.type.hornpipe}
-                      onChange={handleCheckboxClick(
-                        "tunes",
-                        "type",
-                        "hornpipe"
-                      )}
-                    />
-                    <FilterCheckbox
-                      label="Slip Jig"
-                      checked={filterBy.tunes.type["slip jig"]}
-                      onChange={handleCheckboxClick(
-                        "tunes",
-                        "type",
-                        "slip jig"
-                      )}
-                    />
-                    <FilterCheckbox
-                      label="Polka"
-                      checked={filterBy.tunes.type.polka}
-                      onChange={handleCheckboxClick("tunes", "type", "polka")}
-                    />
-                    <FilterCheckbox
-                      label="Slide"
-                      checked={filterBy.tunes.type.slide}
-                      onChange={handleCheckboxClick("tunes", "type", "slide")}
-                    />
-                    <FilterCheckbox
-                      label="Waltz"
-                      checked={filterBy.tunes.type.waltz}
-                      onChange={handleCheckboxClick("tunes", "type", "waltz")}
-                    />
-                    <FilterCheckbox
-                      label="Mazurka"
-                      checked={filterBy.tunes.type.mazurka}
-                      onChange={handleCheckboxClick("tunes", "type", "mazurka")}
-                    />
-                    <FilterCheckbox
-                      label="Other"
-                      checked={filterBy.tunes.type.other}
-                      onChange={handleCheckboxClick("tunes", "type", "other")}
-                    />
-                  </div>
-                </Dropdown>
-                <Button onClick={() => resetFilters("tunes")} className="ml-2">
-                  Reset
-                </Button>
+
+              <div className="flex md:hidden items-center gap-2 w-full">
+                <Accordion collapseAll className="w-full">
+                  <Accordion.Panel>
+                    <Accordion.Title className="text-sm py-2">
+                      <div className="flex items-center gap-2">
+                        <HiPlus className="h-4 w-4" />
+                        More Options
+                      </div>
+                    </Accordion.Title>
+                    <Accordion.Content>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-2 pb-2">
+                          <Button onClick={() => practiceOldest(tunes, "tune")}>
+                            Practice Oldest
+                          </Button>
+                          <Button onClick={() => randomPractice(tunes, "tune")}>
+                            Random Practice
+                          </Button>
+                        </div>
+                        <HR />
+                        <div className="flex flex-col gap-2">
+                          <Dropdown label="Sort By">
+                            <Dropdown.Item
+                              onClick={() =>
+                                setSortBy((prev) => ({
+                                  ...prev,
+                                  tunes: "name",
+                                }))
+                              }
+                            >
+                              Name
+                            </Dropdown.Item>
+                            <Dropdown.Item
+                              onClick={() =>
+                                setSortBy((prev) => ({
+                                  ...prev,
+                                  tunes: "newest",
+                                }))
+                              }
+                            >
+                              Newest
+                            </Dropdown.Item>
+                            <Dropdown.Item
+                              onClick={() =>
+                                setSortBy((prev) => ({
+                                  ...prev,
+                                  tunes: "oldest",
+                                }))
+                              }
+                            >
+                              Oldest
+                            </Dropdown.Item>
+                            <Dropdown.Item
+                              onClick={() =>
+                                setSortBy((prev) => ({
+                                  ...prev,
+                                  tunes: "lastPracticed",
+                                }))
+                              }
+                            >
+                              Last Practiced
+                            </Dropdown.Item>
+                          </Dropdown>
+                          <Dropdown label="Filter By" dismissOnClick={false}>
+                            <div className="max-h-96 overflow-y-auto">
+                              <FilterCheckbox
+                                label="All Time"
+                                checked={filterBy.tunes.timeframe.all}
+                                onChange={handleCheckboxClick(
+                                  "tunes",
+                                  "timeframe",
+                                  "all"
+                                )}
+                              />
+                              <FilterCheckbox
+                                label="Last Week"
+                                checked={filterBy.tunes.timeframe.week}
+                                onChange={handleCheckboxClick(
+                                  "tunes",
+                                  "timeframe",
+                                  "week"
+                                )}
+                              />
+                              <FilterCheckbox
+                                label="Last Month"
+                                checked={filterBy.tunes.timeframe.month}
+                                onChange={handleCheckboxClick(
+                                  "tunes",
+                                  "timeframe",
+                                  "month"
+                                )}
+                              />
+                              <FilterCheckbox
+                                label="Unpracticed"
+                                checked={filterBy.tunes.timeframe.unpracticed}
+                                onChange={handleCheckboxClick(
+                                  "tunes",
+                                  "timeframe",
+                                  "unpracticed"
+                                )}
+                              />
+                              <Dropdown.Divider />
+                              <Dropdown.Header>Tune Type</Dropdown.Header>
+                              <FilterCheckbox
+                                label="All Types"
+                                checked={filterBy.tunes.type.all}
+                                onChange={handleCheckboxClick(
+                                  "tunes",
+                                  "type",
+                                  "all"
+                                )}
+                              />
+                              <FilterCheckbox
+                                label="Reel"
+                                checked={filterBy.tunes.type.reel}
+                                onChange={handleCheckboxClick(
+                                  "tunes",
+                                  "type",
+                                  "reel"
+                                )}
+                              />
+                              <FilterCheckbox
+                                label="Jig"
+                                checked={filterBy.tunes.type.jig}
+                                onChange={handleCheckboxClick(
+                                  "tunes",
+                                  "type",
+                                  "jig"
+                                )}
+                              />
+                              <FilterCheckbox
+                                label="Hornpipe"
+                                checked={filterBy.tunes.type.hornpipe}
+                                onChange={handleCheckboxClick(
+                                  "tunes",
+                                  "type",
+                                  "hornpipe"
+                                )}
+                              />
+                              <FilterCheckbox
+                                label="Slip Jig"
+                                checked={filterBy.tunes.type["slip jig"]}
+                                onChange={handleCheckboxClick(
+                                  "tunes",
+                                  "type",
+                                  "slip jig"
+                                )}
+                              />
+                              <FilterCheckbox
+                                label="Polka"
+                                checked={filterBy.tunes.type.polka}
+                                onChange={handleCheckboxClick(
+                                  "tunes",
+                                  "type",
+                                  "polka"
+                                )}
+                              />
+                              <FilterCheckbox
+                                label="Slide"
+                                checked={filterBy.tunes.type.slide}
+                                onChange={handleCheckboxClick(
+                                  "tunes",
+                                  "type",
+                                  "slide"
+                                )}
+                              />
+                              <FilterCheckbox
+                                label="Waltz"
+                                checked={filterBy.tunes.type.waltz}
+                                onChange={handleCheckboxClick(
+                                  "tunes",
+                                  "type",
+                                  "waltz"
+                                )}
+                              />
+                              <FilterCheckbox
+                                label="Mazurka"
+                                checked={filterBy.tunes.type.mazurka}
+                                onChange={handleCheckboxClick(
+                                  "tunes",
+                                  "type",
+                                  "mazurka"
+                                )}
+                              />
+                              <FilterCheckbox
+                                label="Other"
+                                checked={filterBy.tunes.type.other}
+                                onChange={handleCheckboxClick(
+                                  "tunes",
+                                  "type",
+                                  "other"
+                                )}
+                              />
+                            </div>
+                          </Dropdown>
+                          <Button onClick={() => resetFilters("tunes")}>
+                            Reset
+                          </Button>
+                        </div>
+                      </div>
+                    </Accordion.Content>
+                  </Accordion.Panel>
+                </Accordion>
               </div>
             </div>
             <HR className="my-4" />
@@ -757,7 +1029,9 @@ const User = () => {
           <Tabs.Item title="Sets">
             <div className="flex flex-row justify-between w-full gap-4 flex-wrap">
               <div className="flex items-center gap-2">
-                <NewSet dataFetch={triggerDataFetch} userTunes={tunes} />
+                {id === userId.current && (
+                  <NewSet dataFetch={triggerDataFetch} userTunes={tunes} />
+                )}
                 <TextInput
                   type="text"
                   placeholder="Search sets..."
@@ -767,86 +1041,132 @@ const User = () => {
                   }
                 />
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={() => practiceOldest(sets, "set")}
-                  className="ml-2"
-                >
-                  Practice Oldest
-                </Button>
-                <Button
-                  onClick={() => randomPractice(sets, "set")}
-                  className="ml-2"
-                >
-                  Random Practice
-                </Button>
+              <div className="hidden md:flex items-center gap-2">
+                <ActionButtons
+                  onPracticeOldest={() => practiceOldest(sets, "set")}
+                  onRandomPractice={() => randomPractice(sets, "set")}
+                />
+                <FilterButtons
+                  type="sets"
+                  sortBy={sortBy}
+                  setSortBy={setSortBy}
+                  filterBy={filterBy}
+                  handleCheckboxClick={handleCheckboxClick}
+                  resetFilters={resetFilters}
+                />
               </div>
-              <div className="flex items-center gap-2">
-                <Dropdown label="Sort By" className="ml-2">
-                  <Dropdown.Item
-                    onClick={() =>
-                      setSortBy((prev) => ({ ...prev, sets: "name" }))
-                    }
-                  >
-                    Name
-                  </Dropdown.Item>
-                  <Dropdown.Item
-                    onClick={() =>
-                      setSortBy((prev) => ({ ...prev, sets: "newest" }))
-                    }
-                  >
-                    Newest
-                  </Dropdown.Item>
-                  <Dropdown.Item
-                    onClick={() =>
-                      setSortBy((prev) => ({ ...prev, sets: "oldest" }))
-                    }
-                  >
-                    Oldest
-                  </Dropdown.Item>
-                  <Dropdown.Item
-                    onClick={() =>
-                      setSortBy((prev) => ({ ...prev, sets: "lastPracticed" }))
-                    }
-                  >
-                    Last Practiced
-                  </Dropdown.Item>
-                </Dropdown>
-                <Dropdown
-                  label="Filter By"
-                  className="ml-2"
-                  dismissOnClick={false}
-                >
-                  <div className="max-h-96 overflow-y-auto">
-                    <FilterCheckbox
-                      label="All Time"
-                      checked={filterBy.sets.all}
-                      onChange={handleCheckboxClick("sets", null, "all")}
-                    />
-                    <FilterCheckbox
-                      label="Last Week"
-                      checked={filterBy.sets.week}
-                      onChange={handleCheckboxClick("sets", null, "week")}
-                    />
-                    <FilterCheckbox
-                      label="Last Month"
-                      checked={filterBy.sets.month}
-                      onChange={handleCheckboxClick("sets", null, "month")}
-                    />
-                    <FilterCheckbox
-                      label="Unpracticed"
-                      checked={filterBy.sets.unpracticed}
-                      onChange={handleCheckboxClick(
-                        "sets",
-                        null,
-                        "unpracticed"
-                      )}
-                    />
-                  </div>
-                </Dropdown>
-                <Button onClick={() => resetFilters("sets")} className="ml-2">
-                  Reset
-                </Button>
+
+              <div className="flex md:hidden items-center gap-2 w-full">
+                <Accordion collapseAll className="w-full">
+                  <Accordion.Panel>
+                    <Accordion.Title className="text-sm py-2">
+                      <div className="flex items-center gap-2">
+                        <HiPlus className="h-4 w-4" />
+                        More Options
+                      </div>
+                    </Accordion.Title>
+                    <Accordion.Content>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-2 pb-2">
+                          <Button onClick={() => practiceOldest(sets, "set")}>
+                            Practice Oldest
+                          </Button>
+                          <Button onClick={() => randomPractice(sets, "set")}>
+                            Random Practice
+                          </Button>
+                        </div>
+                        <HR />
+                        <div className="flex flex-col gap-2">
+                          <Dropdown label="Sort By">
+                            <Dropdown.Item
+                              onClick={() =>
+                                setSortBy((prev) => ({
+                                  ...prev,
+                                  sets: "name",
+                                }))
+                              }
+                            >
+                              Name
+                            </Dropdown.Item>
+                            <Dropdown.Item
+                              onClick={() =>
+                                setSortBy((prev) => ({
+                                  ...prev,
+                                  sets: "newest",
+                                }))
+                              }
+                            >
+                              Newest
+                            </Dropdown.Item>
+                            <Dropdown.Item
+                              onClick={() =>
+                                setSortBy((prev) => ({
+                                  ...prev,
+                                  sets: "oldest",
+                                }))
+                              }
+                            >
+                              Oldest
+                            </Dropdown.Item>
+                            <Dropdown.Item
+                              onClick={() =>
+                                setSortBy((prev) => ({
+                                  ...prev,
+                                  sets: "lastPracticed",
+                                }))
+                              }
+                            >
+                              Last Practiced
+                            </Dropdown.Item>
+                          </Dropdown>
+                          <Dropdown label="Filter By" dismissOnClick={false}>
+                            <div className="max-h-96 overflow-y-auto">
+                              <FilterCheckbox
+                                label="All Time"
+                                checked={filterBy.sets.all}
+                                onChange={handleCheckboxClick(
+                                  "sets",
+                                  null,
+                                  "all"
+                                )}
+                              />
+                              <FilterCheckbox
+                                label="Last Week"
+                                checked={filterBy.sets.week}
+                                onChange={handleCheckboxClick(
+                                  "sets",
+                                  null,
+                                  "week"
+                                )}
+                              />
+                              <FilterCheckbox
+                                label="Last Month"
+                                checked={filterBy.sets.month}
+                                onChange={handleCheckboxClick(
+                                  "sets",
+                                  null,
+                                  "month"
+                                )}
+                              />
+                              <FilterCheckbox
+                                label="Unpracticed"
+                                checked={filterBy.sets.unpracticed}
+                                onChange={handleCheckboxClick(
+                                  "sets",
+                                  null,
+                                  "unpracticed"
+                                )}
+                              />
+                            </div>
+                          </Dropdown>
+                          <Button onClick={() => resetFilters("sets")}>
+                            Reset
+                          </Button>
+                        </div>
+                      </div>
+                    </Accordion.Content>
+                  </Accordion.Panel>
+                </Accordion>
               </div>
             </div>
             <HR className="my-4" />
@@ -871,11 +1191,13 @@ const User = () => {
           <Tabs.Item title="Sessions">
             <div className="flex flex-row justify-between w-full gap-4 flex-wrap">
               <div className="flex items-center gap-2">
-                <NewSession
-                  dataFetch={triggerDataFetch}
-                  userTunes={tunes}
-                  userSets={sets}
-                />
+                {id === userId.current && (
+                  <NewSession
+                    dataFetch={triggerDataFetch}
+                    userTunes={tunes}
+                    userSets={sets}
+                  />
+                )}
                 <TextInput
                   type="text"
                   placeholder="Search sessions..."
@@ -885,92 +1207,136 @@ const User = () => {
                   }
                 />
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={() => practiceOldest(sessions, "session")}
-                  className="ml-2"
-                >
-                  Practice Oldest
-                </Button>
-                <Button
-                  onClick={() => randomPractice(sessions, "session")}
-                  className="ml-2"
-                >
-                  Random Practice
-                </Button>
+              <div className="hidden md:flex items-center gap-2">
+                <ActionButtons
+                  onPracticeOldest={() => practiceOldest(sessions, "session")}
+                  onRandomPractice={() => randomPractice(sessions, "session")}
+                />
+                <FilterButtons
+                  type="sessions"
+                  sortBy={sortBy}
+                  setSortBy={setSortBy}
+                  filterBy={filterBy}
+                  handleCheckboxClick={handleCheckboxClick}
+                  resetFilters={resetFilters}
+                />
               </div>
-              <div className="flex items-center gap-2">
-                <Dropdown label="Sort By" className="ml-2">
-                  <Dropdown.Item
-                    onClick={() =>
-                      setSortBy((prev) => ({ ...prev, sessions: "name" }))
-                    }
-                  >
-                    Name
-                  </Dropdown.Item>
-                  <Dropdown.Item
-                    onClick={() =>
-                      setSortBy((prev) => ({ ...prev, sessions: "newest" }))
-                    }
-                  >
-                    Newest
-                  </Dropdown.Item>
-                  <Dropdown.Item
-                    onClick={() =>
-                      setSortBy((prev) => ({ ...prev, sessions: "oldest" }))
-                    }
-                  >
-                    Oldest
-                  </Dropdown.Item>
-                  <Dropdown.Item
-                    onClick={() =>
-                      setSortBy((prev) => ({
-                        ...prev,
-                        sessions: "lastPracticed",
-                      }))
-                    }
-                  >
-                    Last Practiced
-                  </Dropdown.Item>
-                </Dropdown>
-                <Dropdown
-                  label="Filter By"
-                  className="ml-2"
-                  dismissOnClick={false}
-                >
-                  <div className="max-h-96 overflow-y-auto">
-                    <FilterCheckbox
-                      label="All Time"
-                      checked={filterBy.sessions.all}
-                      onChange={handleCheckboxClick("sessions", null, "all")}
-                    />
-                    <FilterCheckbox
-                      label="Last Week"
-                      checked={filterBy.sessions.week}
-                      onChange={handleCheckboxClick("sessions", null, "week")}
-                    />
-                    <FilterCheckbox
-                      label="Last Month"
-                      checked={filterBy.sessions.month}
-                      onChange={handleCheckboxClick("sessions", null, "month")}
-                    />
-                    <FilterCheckbox
-                      label="Unpracticed"
-                      checked={filterBy.sessions.unpracticed}
-                      onChange={handleCheckboxClick(
-                        "sessions",
-                        null,
-                        "unpracticed"
-                      )}
-                    />
-                  </div>
-                </Dropdown>
-                <Button
-                  onClick={() => resetFilters("sessions")}
-                  className="ml-2"
-                >
-                  Reset
-                </Button>
+
+              <div className="flex md:hidden items-center gap-2 w-full">
+                <Accordion collapseAll className="w-full">
+                  <Accordion.Panel>
+                    <Accordion.Title className="text-sm py-2">
+                      <div className="flex items-center gap-2">
+                        <HiPlus className="h-4 w-4" />
+                        More Options
+                      </div>
+                    </Accordion.Title>
+                    <Accordion.Content>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-2 pb-2">
+                          <Button
+                            onClick={() => practiceOldest(sessions, "session")}
+                          >
+                            Practice Oldest
+                          </Button>
+                          <Button
+                            onClick={() => randomPractice(sessions, "session")}
+                          >
+                            Random Practice
+                          </Button>
+                        </div>
+                        <HR />
+                        <div className="flex flex-col gap-2">
+                          <Dropdown label="Sort By">
+                            <Dropdown.Item
+                              onClick={() =>
+                                setSortBy((prev) => ({
+                                  ...prev,
+                                  sessions: "name",
+                                }))
+                              }
+                            >
+                              Name
+                            </Dropdown.Item>
+                            <Dropdown.Item
+                              onClick={() =>
+                                setSortBy((prev) => ({
+                                  ...prev,
+                                  sessions: "newest",
+                                }))
+                              }
+                            >
+                              Newest
+                            </Dropdown.Item>
+                            <Dropdown.Item
+                              onClick={() =>
+                                setSortBy((prev) => ({
+                                  ...prev,
+                                  sessions: "oldest",
+                                }))
+                              }
+                            >
+                              Oldest
+                            </Dropdown.Item>
+                            <Dropdown.Item
+                              onClick={() =>
+                                setSortBy((prev) => ({
+                                  ...prev,
+                                  sessions: "lastPracticed",
+                                }))
+                              }
+                            >
+                              Last Practiced
+                            </Dropdown.Item>
+                          </Dropdown>
+                          <Dropdown label="Filter By" dismissOnClick={false}>
+                            <div className="max-h-96 overflow-y-auto">
+                              <FilterCheckbox
+                                label="All Time"
+                                checked={filterBy.sessions.all}
+                                onChange={handleCheckboxClick(
+                                  "sessions",
+                                  null,
+                                  "all"
+                                )}
+                              />
+                              <FilterCheckbox
+                                label="Last Week"
+                                checked={filterBy.sessions.week}
+                                onChange={handleCheckboxClick(
+                                  "sessions",
+                                  null,
+                                  "week"
+                                )}
+                              />
+                              <FilterCheckbox
+                                label="Last Month"
+                                checked={filterBy.sessions.month}
+                                onChange={handleCheckboxClick(
+                                  "sessions",
+                                  null,
+                                  "month"
+                                )}
+                              />
+                              <FilterCheckbox
+                                label="Unpracticed"
+                                checked={filterBy.sessions.unpracticed}
+                                onChange={handleCheckboxClick(
+                                  "sessions",
+                                  null,
+                                  "unpracticed"
+                                )}
+                              />
+                            </div>
+                          </Dropdown>
+                          <Button onClick={() => resetFilters("sessions")}>
+                            Reset
+                          </Button>
+                        </div>
+                      </div>
+                    </Accordion.Content>
+                  </Accordion.Panel>
+                </Accordion>
               </div>
             </div>
             <HR className="my-4" />

@@ -3,13 +3,10 @@ import {
   Button,
   Textarea,
   Select,
-  FileInput,
   Label,
   Modal,
   TextInput,
 } from "flowbite-react";
-import ReactPlayer from "react-player";
-import { set } from "mongoose";
 import FileUploadSection from "./FileUploadSection";
 import LinksSection from "./LinksSection";
 import AudioRecorder from "./AudioRecorder";

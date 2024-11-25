@@ -8,7 +8,6 @@ import {
   Modal,
   TextInput,
 } from "flowbite-react";
-import ReactPlayer from "react-player";
 import {
   DndContext,
   closestCenter,

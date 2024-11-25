@@ -132,8 +132,25 @@ const DisplaySession = ({ session, userId, dataFetch, goTo, itemMemory }) => {
                         key={index}
                         url={recording}
                         controls
+                        playsinline
+                        style={{ width: "80%", height: "30px" }}
                         width="100%"
-                        height="50px"
+                        height="100%"
+                        config={{
+                          file: {
+                            attributes: {
+                              controlsList: "nodownload",
+                              playsInline: true,
+                            },
+                            forceAudio: true,
+                          },
+                        }}
+                        fallback={
+                          <audio controls src={recording} className="w-full">
+                            Your browser does not support the audio element.
+                          </audio>
+                        }
+                        className="ml-2"
                       />
                     ))}
                   </div>
