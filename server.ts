@@ -68,7 +68,7 @@ app.use(
     cookie: {
       maxAge: 24 * 60 * 60 * 1000, // 1 day expiration for session cookies
       secure: process.env.NODE_ENV === "production", // Set to true in production (https only)
-      httpOnly: true,
+      httpOnly: true, // This makes the cookie invisible to JavaScript
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Allow cross-site cookies in production
       domain:
         process.env.NODE_ENV === "production"
@@ -81,6 +81,16 @@ app.use(
 
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Add this middleware before your routes
+app.use((req, res, next) => {
+  if (req.method === "POST" || req.method === "PUT") {
+    console.log("Request cookies:", req.cookies);
+    console.log("Session ID:", req.sessionID);
+    console.log("Session data:", req.session);
+  }
+  next();
+});
 
 // Use CORS middleware
 app.use(
@@ -325,6 +335,13 @@ app.get(
     req.session.userId = user.userId;
     req.session.isAdmin = user.isAdmin;
     req.session.email = user.email;
+
+    // Add logging here
+    console.log("New session created:");
+    console.log("Session ID:", req.sessionID);
+    console.log("Session data:", req.session);
+    console.log("Session cookie:", req.session.cookie);
+
     req.session.save();
     if (!user) {
       console.error("No user found in request");
@@ -623,6 +640,7 @@ async function createTuneId(req, res, next) {
 
 // Posting Tunes
 app.post("/api/tunes", createTuneId, (req: CustomRequest, res) => {
+  console.log("Session data:", req.session);
   console.log("Incoming request to /api/tunes");
   let tuneId = req.tuneId;
   uploadTune(req, res, async (err) => {

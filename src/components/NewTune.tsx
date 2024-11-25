@@ -95,6 +95,7 @@ const NewTune = ({ dataFetch }) => {
     try {
       const response = await fetch("/api/tunes", {
         method: "POST",
+        credentials: "include",
         body: formData,
         headers: {
           // Ensure the server interprets the request correctly

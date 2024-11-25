@@ -48,6 +48,7 @@ const ItemState = ({ state, item, id, userId }) => {
       try {
         const response = await fetch("/api/users/" + userId + "/state", {
           method: "PUT",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },

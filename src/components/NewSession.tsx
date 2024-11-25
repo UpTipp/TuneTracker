@@ -185,6 +185,7 @@ const NewSession = ({ dataFetch, userTunes, userSets }) => {
     try {
       const response = await fetch("/api/sessions", {
         method: "POST",
+        credentials: "include",
         body: formData,
         headers: {
           Accept: "application/json",

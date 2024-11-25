@@ -182,6 +182,7 @@ const NewSet = ({ dataFetch, userTunes }) => {
     try {
       const response = await fetch("/api/sets", {
         method: "POST",
+        credentials: "include",
         body: formData,
         headers: {
           // Ensure the server interprets the request correctly
