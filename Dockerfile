@@ -2,15 +2,25 @@ FROM node:18
 
 WORKDIR /usr/src/app
 
+# Copy package files first
 COPY package*.json ./
+
+# Install dependencies
 RUN npm install
 
+# Copy the rest of the application
 COPY . .
-RUN npm run build
 
+# Install tsx globally
+RUN npm install -g tsx
+
+# Create upload directories
 RUN mkdir -p uploads/tunes uploads/sets uploads/sessions
 
-EXPOSE 3000
+# Build the React app
+RUN CI=true npm run build
 
-# Use the new start:prod script
-CMD ["npm", "run", "start:prod"]
+EXPOSE 3001
+
+# Start using tsx
+CMD ["tsx", "server.ts"]
