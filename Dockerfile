@@ -18,7 +18,7 @@ RUN npm install -g tsx
 RUN mkdir -p uploads/tunes uploads/sets uploads/sessions
 
 # Build the React app
-RUN CI=true npm run build
+RUN npm run build
 
 EXPOSE 3001
 
