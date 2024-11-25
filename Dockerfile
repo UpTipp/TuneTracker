@@ -24,7 +24,7 @@ RUN npm run build
 # Create upload directories
 RUN mkdir -p uploads/tunes uploads/sets uploads/sessions
 
-EXPOSE 3001
+EXPOSE 3002
 
 # Start the server
 CMD ["npm", "run", "start:prod"]

@@ -2,10 +2,10 @@ services:
   tunetracker:
     build: .
     ports:
-      - "3001:3001"
+      - "3002:3002"
     environment:
       - MONGO_URI=your_mongodb_uri
-      - PORT=3001
+      - PORT=3002
       - SESSION_SECRET=your_session_secret
       - GOOGLE_CLIENT_ID=your_google_client_id
       - GOOGLE_CLIENT_SECRET=your_google_client_secret
