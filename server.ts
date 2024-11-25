@@ -44,7 +44,9 @@ mongoose
 const sessionStore = MongoStore.create({
   mongoUrl: process.env.MONGO_URI,
   collectionName: "userSessions",
-  ttl: 24 * 60 * 60, // = 1 day. Default is 1 day if you want to set a different TTL.
+  ttl: 24 * 60 * 60,
+  autoRemove: "native",
+  touchAfter: 24 * 3600, // Update only once per 24 hours
 });
 
 /* Setting Server Up */
@@ -64,18 +66,20 @@ app.use(
   session({
     secret: secret,
     resave: false,
-    saveUninitialized: false, // Changed to false for better security
+    saveUninitialized: false,
     cookie: {
-      maxAge: 24 * 60 * 60 * 1000, // 1 day expiration for session cookies
-      secure: process.env.NODE_ENV === "production", // Set to true in production (https only)
-      httpOnly: true, // This makes the cookie invisible to JavaScript
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Allow cross-site cookies in production
+      maxAge: 24 * 60 * 60 * 1000,
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       domain:
         process.env.NODE_ENV === "production"
           ? ".charlescrossan.com"
-          : undefined, // Set domain in production
+          : undefined,
     },
     store: sessionStore,
+    name: "sessionId", // Explicit session cookie name
+    rolling: true, // Refresh session with each request
   })
 );
 
@@ -204,7 +208,8 @@ passport.use(
 // Serializing and Deserializing User
 passport.serializeUser(
   (user: Express.User, done: (err: any, id?: any) => void) => {
-    done(null, user);
+    const typedUser = user as IUser;
+    done(null, typedUser.userId); // Only store userId
   }
 );
 
@@ -212,6 +217,9 @@ passport.deserializeUser(
   async (userId: string, done: (err: any, user?: any) => void) => {
     try {
       const user = await User.findOne({ userId: userId });
+      if (!user) {
+        return done(new Error("User not found"), null);
+      }
       done(null, user);
     } catch (err) {
       done(err, null);
@@ -332,43 +340,68 @@ app.get(
   }),
   (req, res) => {
     const user = req.user as IUser;
+
+    // Set session data
     req.session.userId = user.userId;
     req.session.isAdmin = user.isAdmin;
     req.session.email = user.email;
 
-    // Add logging here
-    console.log("New session created:");
-    console.log("Session ID:", req.sessionID);
-    console.log("Session data:", req.session);
-    console.log("Session cookie:", req.session.cookie);
+    // Force session save before redirect
+    req.session.save((err) => {
+      if (err) {
+        console.error("Session save error:", err);
+        return res.status(500).send("Error saving session");
+      }
 
-    req.session.save();
-    if (!user) {
-      console.error("No user found in request");
-      return res.status(400).send("User not found");
-    }
+      const userInfo = {
+        id: user.userId,
+        email: user.email,
+        isAdmin: user.isAdmin,
+      };
 
-    const userInfo = {
-      id: req.session.userId,
-      email: req.session.email,
-      isAdmin: req.session.isAdmin,
-    };
+      // Set cookie after successful session save
+      res.cookie("user", JSON.stringify(userInfo), {
+        secure: process.env.NODE_ENV === "production",
+        expires: req.session.cookie.expires,
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        domain:
+          process.env.NODE_ENV === "production"
+            ? ".charlescrossan.com"
+            : undefined,
+      });
 
-    const sessionExpiration = req.session.cookie.expires || undefined;
-
-    res.cookie("user", JSON.stringify(userInfo), {
-      secure: process.env.NODE_ENV === "production",
-      expires: sessionExpiration,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      domain:
-        process.env.NODE_ENV === "production"
-          ? ".charlescrossan.com"
-          : undefined,
+      // Redirect after everything is saved
+      res.redirect("/user/" + user.userId);
     });
-    // Send a JSON response with additional information
-    res.status(200).redirect("/user/" + req.session.userId);
   }
 );
+
+// Add session logging middleware
+app.use((req, res, next) => {
+  if (req.method === "POST" || req.method === "PUT") {
+    console.log("Request session data:", {
+      sessionID: req.sessionID,
+      userId: req.session?.userId,
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user,
+    });
+  }
+  next();
+});
+
+// Update auth checking middleware to only use req.user
+app.use("/api/*", (req, res, next) => {
+  const user = req.user as IUser;
+  console.log("Auth check:", {
+    user: user,
+    isAuthenticated: req.isAuthenticated(),
+  });
+
+  if (!req.isAuthenticated()) {
+    return res.status(401).send("Not authenticated");
+  }
+  next();
+});
 
 // Logout Route
 app.get("/logout", (req, res) => {
@@ -512,12 +545,13 @@ app.get("/api/users/:id", async (req, res) => {
 
 app.put("/api/users/:id/state", async (req, res) => {
   const { id } = req.params;
+  const user = req.user as IUser;
 
-  if (!req.session || !req.session.userId) {
-    return res.status(403).send("Not Logged In!");
+  if (!user) {
+    return res.status(401).send("Not authenticated");
   }
 
-  if (req.session.userId != id) {
+  if (user.userId !== id) {
     return res.status(403).send("Not Authorized!");
   }
 
@@ -640,6 +674,11 @@ async function createTuneId(req, res, next) {
 
 // Posting Tunes
 app.post("/api/tunes", createTuneId, (req: CustomRequest, res) => {
+  const currentUser = req.user as IUser;
+  if (!currentUser) {
+    return res.status(401).send("Not authenticated");
+  }
+
   console.log("Session data:", req.session);
   console.log("Incoming request to /api/tunes");
   let tuneId = req.tuneId;
@@ -672,7 +711,7 @@ app.post("/api/tunes", createTuneId, (req: CustomRequest, res) => {
 
       const newTune = new Tune({
         tuneId,
-        userId: req.session.userId, // User ID from session
+        userId: currentUser.userId, // User ID from session
         tuneName,
         tuneType,
         tuneKey,
@@ -686,7 +725,7 @@ app.post("/api/tunes", createTuneId, (req: CustomRequest, res) => {
       await newTune.save();
 
       // Add the tune to the user's tuneStates
-      let user = await User.findOne({ userId: req.session.userId });
+      let user = await User.findOne({ userId: currentUser.userId });
       user.tuneStates.push({
         tuneId,
         state: "want-to-learn",
@@ -735,6 +774,7 @@ app.get("/api/tunes/:id", async (req, res) => {
 
 // Updating a Specific Tune
 app.put("/api/tunes/:id", async (req: CustomRequest, res) => {
+  const user = req.user as IUser;
   req.tuneId = req.params.id; // Set the tuneId on the request object
   uploadTune(req, res, async (err) => {
     const { id } = req.params;
@@ -748,11 +788,7 @@ app.put("/api/tunes/:id", async (req: CustomRequest, res) => {
         return res.status(404).send("No Tune Found!");
       }
 
-      if (
-        req.session &&
-        tune.userId !== req.session.userId &&
-        !req.session.isAdmin
-      ) {
+      if (!user.isAdmin && tune.userId !== user.userId) {
         return res.status(403).send("Not authorized to update this tune!");
       }
 
@@ -1041,6 +1077,7 @@ app.get("/api/sets/:id", async (req, res) => {
 
 // Updating a Set
 app.put("/api/sets/:id", async (req: CustomRequest, res) => {
+  const user = req.user as IUser;
   req.setId = req.params.id; // Set the setId on the request object
   uploadSet(req, res, async (err) => {
     const { id } = req.params;
@@ -1054,12 +1091,8 @@ app.put("/api/sets/:id", async (req: CustomRequest, res) => {
         return res.status(404).send("No Tune Found!");
       }
 
-      if (
-        req.session &&
-        set.userId !== req.session.userId &&
-        !req.session.isAdmin
-      ) {
-        return res.status(403).send("Not authorized to update this tune!");
+      if (!user.isAdmin && set.userId !== user.userId) {
+        return res.status(403).send("Not authorized to update this set!");
       }
 
       const recordingsDir = path.join(__dirname, "uploads", "sets", set.setId);
@@ -1184,8 +1217,9 @@ app.put("/api/sets/:id", async (req: CustomRequest, res) => {
 
 // Posting a Session
 app.post("/api/sessions", uploadSession, async (req, res) => {
-  if (!req.session || !req.session.userId) {
-    return res.status(403).send("Not Logged In!");
+  const user = req.user as IUser;
+  if (!user) {
+    return res.status(401).send("Not authenticated");
   }
 
   const { sessionName, tuneIds, setIds, comments } = req.body;
@@ -1203,7 +1237,7 @@ app.post("/api/sessions", uploadSession, async (req, res) => {
 
     const newSession = new Session({
       sessionId,
-      userId: req.session.userId,
+      userId: user.userId,
       sessionName,
       tuneIds: JSON.parse(tuneIds || "[]"), // Assuming tuneIds is a JSON stringified array
       setIds: JSON.parse(setIds || "[]"), // Assuming setIds is a JSON stringified array
