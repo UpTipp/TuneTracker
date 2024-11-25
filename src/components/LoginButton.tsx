@@ -13,12 +13,12 @@ const LoginButton = () => {
   };
 
   const handleLogout = async () => {
+    setIsLoggedIn(false);
+    Cookies.remove("user");
     await fetch(`${window.location.origin}/logout/`, {
       method: "GET",
       credentials: "include",
     }).then((response) => {
-      Cookies.remove("user");
-      setIsLoggedIn(false);
       if (!response.ok) {
         console.error("Logout failed server side!");
       }
