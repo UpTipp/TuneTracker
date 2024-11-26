@@ -13,17 +13,34 @@ const LoginButton = () => {
   };
 
   const handleLogout = async () => {
-    setIsLoggedIn(false);
-    Cookies.remove("user");
-    await fetch(`${window.location.origin}/logout/`, {
-      method: "GET",
-      credentials: "include",
-    }).then((response) => {
+    try {
+      const response = await fetch(`${window.location.origin}/logout/`, {
+        method: "GET",
+        credentials: "include",
+      });
+
       if (!response.ok) {
-        console.error("Logout failed server side!");
+        throw new Error("Logout failed server side!");
       }
-    });
-    window.location.reload();
+
+      // Clear all cookies
+      Object.keys(Cookies.get()).forEach((cookieName) => {
+        Cookies.remove(cookieName, {
+          path: "/",
+          domain:
+            process.env.NODE_ENV === "production"
+              ? ".charlescrossan.com"
+              : undefined,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        });
+      });
+
+      setIsLoggedIn(false);
+      window.location.href = "/"; // Redirect to home page
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
   };
 
   return (

@@ -1214,6 +1214,49 @@ app.get("/api/sessions/:id", async (req, res) => {
   }
 });
 
+// Add this new logout route after the Google auth routes
+app.get("/logout/", (req, res) => {
+  // Clear the session
+  req.logout((err) => {
+    if (err) {
+      console.error("Logout error:", err);
+      return res.status(500).send("Error during logout");
+    }
+
+    // Destroy the session
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Session destruction error:", err);
+        return res.status(500).send("Error destroying session");
+      }
+
+      // Clear all cookies
+      res.clearCookie("sessionId", {
+        path: "/",
+        domain:
+          process.env.NODE_ENV === "production"
+            ? ".charlescrossan.com"
+            : undefined,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      });
+
+      res.clearCookie("user", {
+        path: "/",
+        domain:
+          process.env.NODE_ENV === "production"
+            ? ".charlescrossan.com"
+            : undefined,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      });
+
+      // Send success response
+      res.status(200).send("Logged out successfully");
+    });
+  });
+});
+
 // Handle other routes by serving the React app
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "./build", "index.html"));
