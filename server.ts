@@ -452,6 +452,32 @@ async function createSetId(req, res, next) {
   return res.status(500).send("Failed to generate a unique setId");
 }
 
+// Add this logging middleware before your routes
+app.use((req, res, next) => {
+  const start = Date.now();
+
+  // Log request details
+  console.log(`\n=== ${new Date().toISOString()} ===`);
+  console.log(`${req.method} ${req.url}`);
+  console.log("Headers:", JSON.stringify(req.headers, null, 2));
+  console.log("Query:", JSON.stringify(req.query, null, 2));
+  console.log("Body:", JSON.stringify(req.body, null, 2));
+  console.log(
+    "User:",
+    req.user ? `ID: ${(req.user as IUser).userId}` : "Not authenticated"
+  );
+
+  // Log response details
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    console.log(`Response Status: ${res.statusCode}`);
+    console.log(`Response Time: ${duration}ms`);
+    console.log("=== End ===\n");
+  });
+
+  next();
+});
+
 // Protected routes that need authentication
 app.put("/api/users/:id/state", requireAuth, async (req, res) => {
   const { id } = req.params;
@@ -555,6 +581,8 @@ app.post("/api/users/:id/:type", requireAuth, async (req, res) => {
 });
 
 app.post("/api/tunes", createTuneId, requireAuth, (req: CustomRequest, res) => {
+  console.log("[POST /api/tunes] Creating new tune");
+  console.log("TuneId:", req.tuneId);
   const currentUser = req.user as IUser;
   if (!currentUser) {
     return res.status(401).send("Not authenticated");
@@ -628,6 +656,7 @@ app.post("/api/tunes", createTuneId, requireAuth, (req: CustomRequest, res) => {
 });
 
 app.put("/api/tunes/:id", requireAuth, async (req: CustomRequest, res) => {
+  console.log("[PUT /api/tunes/:id] Updating tune:", req.params.id);
   const user = req.user as IUser;
   req.tuneId = req.params.id; // Set the tuneId on the request object
   uploadTune(req, res, async (err) => {
@@ -747,6 +776,8 @@ app.put("/api/tunes/:id", requireAuth, async (req: CustomRequest, res) => {
 });
 
 app.post("/api/sets", createSetId, requireAuth, (req: CustomRequest, res) => {
+  console.log("[POST /api/sets] Creating new set");
+  console.log("SetId:", req.setId);
   console.log("Incoming request to /api/sets");
   let setId = req.setId;
   uploadSet(req, res, async (err) => {
@@ -831,6 +862,7 @@ app.post("/api/sets", createSetId, requireAuth, (req: CustomRequest, res) => {
 });
 
 app.put("/api/sets/:id", requireAuth, async (req: CustomRequest, res) => {
+  console.log("[PUT /api/sets/:id] Updating set:", req.params.id);
   const user = req.user as IUser;
   req.setId = req.params.id; // Set the setId on the request object
   uploadSet(req, res, async (err) => {
@@ -933,6 +965,8 @@ app.put("/api/sets/:id", requireAuth, async (req: CustomRequest, res) => {
 });
 
 app.post("/api/sessions", requireAuth, uploadSession, async (req, res) => {
+  console.log("[POST /api/sessions] Creating new session");
+  console.log("SessionId:", req.body.sessionId);
   const user = req.user as IUser;
   if (!user) {
     return res.status(401).send("Not authenticated");
@@ -972,6 +1006,7 @@ app.post("/api/sessions", requireAuth, uploadSession, async (req, res) => {
 });
 
 app.delete("/api/sessions/:id", requireAuth, async (req, res) => {
+  console.log("[DELETE /api/sessions/:id] Deleting session:", req.params.id);
   const { id } = req.params;
 
   try {
@@ -1012,6 +1047,7 @@ app.delete("/api/sessions/:id", requireAuth, async (req, res) => {
 
 // Public routes (no auth required)
 app.get("/api/users-top", async (req, res) => {
+  console.log("[GET /api/users-top] Retrieving top users");
   try {
     const topUsers = await User.aggregate([
       {
@@ -1053,6 +1089,7 @@ app.get("/api/users-top", async (req, res) => {
 
 // New Users
 app.get("/api/users-new", async (req, res) => {
+  console.log("[GET /api/users-new] Retrieving new users");
   try {
     const newUsers = await User.find()
       .sort({ dateAdded: -1 })
@@ -1068,6 +1105,7 @@ app.get("/api/users-new", async (req, res) => {
 
 // New Tunes
 app.get("/api/tunes-new", async (req, res) => {
+  console.log("[GET /api/tunes-new] Retrieving new tunes");
   try {
     const newTunes = await Tune.find()
       .sort({ dateAdded: -1 })
@@ -1099,6 +1137,7 @@ app.get("/api/tunes-new", async (req, res) => {
 // User Continued
 // Single User
 app.get("/api/users/:id", async (req, res) => {
+  console.log("[GET /api/users/:id] Retrieving user:", req.params.id);
   const { id } = req.params;
 
   try {
@@ -1117,6 +1156,7 @@ app.get("/api/users/:id", async (req, res) => {
 
 // Getting a Specific Tune
 app.get("/api/tunes/:id", async (req, res) => {
+  console.log("[GET /api/tunes/:id] Retrieving tune:", req.params.id);
   const { id } = req.params;
 
   try {
@@ -1143,6 +1183,7 @@ app.get("/api/tunes/:id", async (req, res) => {
 
 // Getting a specific Set
 app.get("/api/sets/:id", async (req, res) => {
+  console.log("[GET /api/sets/:id] Retrieving set:", req.params.id);
   const { id } = req.params;
 
   try {
@@ -1176,6 +1217,7 @@ app.get("/api/sets/:id", async (req, res) => {
 
 // Getting a Session
 app.get("/api/sessions/:id", async (req, res) => {
+  console.log("[GET /api/sessions/:id] Retrieving session:", req.params.id);
   const { id } = req.params;
 
   try {
@@ -1216,6 +1258,11 @@ app.get("/api/sessions/:id", async (req, res) => {
 
 // Add this new logout route after the Google auth routes
 app.get("/logout/", (req, res) => {
+  console.log("[GET /logout] User logging out");
+  console.log(
+    "User:",
+    req.user ? `ID: ${(req.user as IUser).userId}` : "Not authenticated"
+  );
   // Clear the session
   req.logout((err) => {
     if (err) {
