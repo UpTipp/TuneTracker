@@ -65,7 +65,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(
   session({
     secret: secret,
-    resave: false,
+    resave: true, // Changed to true to ensure session is saved
     saveUninitialized: false,
     cookie: {
       maxAge: 24 * 60 * 60 * 1000,
@@ -76,6 +76,7 @@ app.use(
         process.env.NODE_ENV === "production"
           ? ".charlescrossan.com"
           : undefined,
+      path: "/",
     },
     store: sessionStore,
     name: "sessionId", // Explicit session cookie name
@@ -85,6 +86,25 @@ app.use(
 
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Add this debugging middleware before any route handlers
+app.use((req, res, next) => {
+  console.log("\n=== Session Debug Info ===");
+  console.log("Cookies:", req.headers.cookie);
+  console.log("Session ID:", req.sessionID);
+  console.log("Session:", {
+    ...req.session,
+    cookie: {
+      ...req.session?.cookie,
+      expires: req.session?.cookie?.expires,
+      maxAge: req.session?.cookie?.maxAge,
+    },
+  });
+  console.log("Is Authenticated:", req.isAuthenticated());
+  console.log("User:", req.user);
+  console.log("=== End Session Debug ===\n");
+  next();
+});
 
 // Add this middleware before your routes
 app.use((req, res, next) => {
@@ -346,12 +366,18 @@ app.get(
     req.session.isAdmin = user.isAdmin;
     req.session.email = user.email;
 
-    // Force session save before redirect
+    // Force session save and wait for completion
     req.session.save((err) => {
       if (err) {
         console.error("Session save error:", err);
         return res.status(500).send("Error saving session");
       }
+
+      console.log("Session saved successfully:", {
+        sessionID: req.sessionID,
+        userId: req.session.userId,
+        isAuthenticated: req.isAuthenticated(),
+      });
 
       const userInfo = {
         id: user.userId,
@@ -359,18 +385,19 @@ app.get(
         isAdmin: user.isAdmin,
       };
 
-      // Set cookie after successful session save
+      // Set cookie with explicit attributes
       res.cookie("user", JSON.stringify(userInfo), {
         secure: process.env.NODE_ENV === "production",
-        expires: req.session.cookie.expires,
+        httpOnly: false,
+        expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         domain:
           process.env.NODE_ENV === "production"
             ? ".charlescrossan.com"
             : undefined,
+        path: "/",
       });
 
-      // Redirect after everything is saved
       res.redirect("/user/" + user.userId);
     });
   }
@@ -391,9 +418,18 @@ app.use((req, res, next) => {
 
 // Create an auth check middleware function
 const requireAuth = (req, res, next) => {
+  console.log("\n=== Auth Check ===");
+  console.log("Session ID:", req.sessionID);
+  console.log("Is Authenticated:", req.isAuthenticated());
+  console.log("Session User:", req.session?.userId);
+  console.log("Passport User:", req.user);
+  console.log("=== End Auth Check ===\n");
+
   if (!req.isAuthenticated()) {
+    console.log("Authentication failed");
     return res.status(401).send("Not authenticated");
   }
+  console.log("Authentication successful");
   next();
 };
 
