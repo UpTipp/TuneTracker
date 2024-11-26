@@ -389,171 +389,71 @@ app.use((req, res, next) => {
   next();
 });
 
-// Update auth checking middleware to only protect specific routes
-app.use("/api/*", (req, res, next) => {
-  // Skip auth check for public routes
-  if (
-    req.method === "GET" &&
-    (req.path === "/api/users-top" ||
-      req.path === "/api/users-new" ||
-      req.path === "/api/tunes-new")
-  ) {
-    return next();
-  }
-
-  const user = req.user as IUser;
-  console.log("Auth check:", {
-    user: user,
-    isAuthenticated: req.isAuthenticated(),
-  });
-
+// Create an auth check middleware function
+const requireAuth = (req, res, next) => {
   if (!req.isAuthenticated()) {
     return res.status(401).send("Not authenticated");
   }
   next();
-});
+};
 
-// Logout Route
-app.get("/logout", (req, res) => {
-  if (!req.session) {
-    return res.status(400).send("You are already logged out");
-  }
+// Keep these functions with their full implementations
+async function createTuneId(req, res, next) {
+  console.log("Generating tuneId...");
+  let attempts = 0;
+  const maxAttempts = 10; // Set a maximum number of attempts to avoid infinite loop
 
-  req.logout((err) => {
-    if (err) {
-      console.error("Logout error:", err);
-      return res.status(500).send("Logout failed");
+  while (attempts < maxAttempts) {
+    let tuneId = crypto.randomBytes(16).toString("hex");
+    const existingTune = await Tune.findOne({ tuneId: tuneId });
+
+    if (!existingTune) {
+      req.tuneId = tuneId; // Set tuneId directly on the req object
+      console.log("Generated tuneId:", tuneId);
+      return next();
     }
 
-    // Manually destroy the session
-    req.session.destroy(async (err) => {
-      if (err) {
-        console.error("Session destruction error:", err);
-        return res.status(500).send("Session destruction failed");
-      }
-
-      // Remove session from MongoDB
-      await sessionStore.destroy(req.sessionID, (err) => {
-        if (err) {
-          console.error("Failed to remove session from MongoDB:", err);
-        } else {
-          console.log("Session removed from MongoDB");
-        }
-      });
-
-      console.log("Session Destroyed!");
-      res.redirect("/"); // Redirect to home after logout
-    });
-  });
-});
-
-// Stats Routes
-// Top Users
-app.get("/api/users-top", async (req, res) => {
-  try {
-    const topUsers = await User.aggregate([
-      {
-        $lookup: {
-          from: "tunes",
-          localField: "userId",
-          foreignField: "userId",
-          as: "tunes",
-        },
-      },
-      {
-        $addFields: {
-          tuneCount: { $size: "$tunes" },
-        },
-      },
-      {
-        $sort: { tuneCount: -1 },
-      },
-      {
-        $limit: 10,
-      },
-      {
-        $project: {
-          userId: 1,
-          firstName: 1,
-          lastName: 1,
-          picture: 1,
-          tuneCount: 1,
-        },
-      },
-    ]);
-
-    return res.status(200).json(topUsers);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).send("Error retrieving top users");
+    console.log("Duplicate tuneId found, regenerating...");
+    attempts++;
   }
-});
 
-// New Users
-app.get("/api/users-new", async (req, res) => {
-  try {
-    const newUsers = await User.find()
-      .sort({ dateAdded: -1 })
-      .limit(10)
-      .select("userId firstName lastName picture dateAdded");
+  console.error(
+    "Failed to generate a unique tuneId after",
+    maxAttempts,
+    "attempts"
+  );
+  return res.status(500).send("Failed to generate a unique tuneId");
+}
 
-    return res.status(200).json(newUsers);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).send("Error retrieving new users");
-  }
-});
+async function createSetId(req, res, next) {
+  console.log("Generating setId...");
+  let attempts = 0;
+  const maxAttempts = 10; // Set a maximum number of attempts to avoid infinite loop
 
-// New Tunes
-app.get("/api/tunes-new", async (req, res) => {
-  try {
-    const newTunes = await Tune.find()
-      .sort({ dateAdded: -1 })
-      .limit(10)
-      .select("tuneId tuneName userId tuneType dateAdded");
+  while (attempts < maxAttempts) {
+    let setId = crypto.randomBytes(16).toString("hex");
+    const existingSet = await Set.findOne({ setId: setId });
 
-    // Get user details for each tune
-    const tunesWithUserDetails = await Promise.all(
-      newTunes.map(async (tune) => {
-        const user = await User.findOne({ userId: tune.userId }).select(
-          "firstName lastName"
-        );
-        return {
-          ...tune.toObject(),
-          userId: tune?.userId,
-          firstName: user?.firstName,
-          lastName: user?.lastName,
-        };
-      })
-    );
-
-    return res.status(200).json(tunesWithUserDetails);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).send("Error retrieving new tunes");
-  }
-});
-
-// User Continued
-// Single User
-app.get("/api/users/:id", async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const user = await User.findOne({ userId: id });
-
-    if (user) {
-      return res.status(200).json(JSON.stringify(user));
-    } else {
-      return res.status(404).send("User not found");
+    if (!existingSet) {
+      req.setId = setId; // Set setId directly on the req object
+      console.log("Generated setId:", setId);
+      return next();
     }
-  } catch (error) {
-    console.error(error);
-    return res.status(500).send("Error retrieving user");
-  }
-});
 
-app.put("/api/users/:id/state", async (req, res) => {
+    console.log("Duplicate setId found, regenerating...");
+    attempts++;
+  }
+
+  console.error(
+    "Failed to generate a unique setId after",
+    maxAttempts,
+    "attempts"
+  );
+  return res.status(500).send("Failed to generate a unique setId");
+}
+
+// Protected routes that need authentication
+app.put("/api/users/:id/state", requireAuth, async (req, res) => {
   const { id } = req.params;
   const user = req.user as IUser;
 
@@ -611,7 +511,7 @@ app.put("/api/users/:id/state", async (req, res) => {
   }
 });
 
-app.post("/api/users/:id/:type", async (req, res) => {
+app.post("/api/users/:id/:type", requireAuth, async (req, res) => {
   const { id, type } = req.params;
 
   if (!req.session || !req.session.userId) {
@@ -654,36 +554,7 @@ app.post("/api/users/:id/:type", async (req, res) => {
   }
 });
 
-// Tunes
-async function createTuneId(req, res, next) {
-  console.log("Generating tuneId...");
-  let attempts = 0;
-  const maxAttempts = 10; // Set a maximum number of attempts to avoid infinite loop
-
-  while (attempts < maxAttempts) {
-    let tuneId = crypto.randomBytes(16).toString("hex");
-    const existingTune = await Tune.findOne({ tuneId: tuneId });
-
-    if (!existingTune) {
-      req.tuneId = tuneId; // Set tuneId directly on the req object
-      console.log("Generated tuneId:", tuneId);
-      return next();
-    }
-
-    console.log("Duplicate tuneId found, regenerating...");
-    attempts++;
-  }
-
-  console.error(
-    "Failed to generate a unique tuneId after",
-    maxAttempts,
-    "attempts"
-  );
-  return res.status(500).send("Failed to generate a unique tuneId");
-}
-
-// Posting Tunes
-app.post("/api/tunes", createTuneId, (req: CustomRequest, res) => {
+app.post("/api/tunes", createTuneId, requireAuth, (req: CustomRequest, res) => {
   const currentUser = req.user as IUser;
   if (!currentUser) {
     return res.status(401).send("Not authenticated");
@@ -756,34 +627,7 @@ app.post("/api/tunes", createTuneId, (req: CustomRequest, res) => {
   });
 });
 
-// Getting a Specific Tune
-app.get("/api/tunes/:id", async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    // Find the tune by its ID
-    const tune = await Tune.findOne({ tuneId: id });
-
-    // If no tune is found, return a 404 error
-    if (!tune) {
-      return res.status(404).send("Tune not found");
-    }
-
-    // Attach the recordings to the tune object
-    const tuneData = {
-      ...tune.toObject(), // Convert Mongoose document to plain object
-    };
-
-    // Return the tune data along with the recordings
-    return res.status(200).json(tuneData);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).send("Error retrieving tune");
-  }
-});
-
-// Updating a Specific Tune
-app.put("/api/tunes/:id", async (req: CustomRequest, res) => {
+app.put("/api/tunes/:id", requireAuth, async (req: CustomRequest, res) => {
   const user = req.user as IUser;
   req.tuneId = req.params.id; // Set the tuneId on the request object
   uploadTune(req, res, async (err) => {
@@ -902,73 +746,7 @@ app.put("/api/tunes/:id", async (req: CustomRequest, res) => {
   });
 });
 
-// Deleting a Specific Tune
-// app.delete('/api/tunes/:id', async (req, res) => {
-//   const { id } = req.params;
-
-//   try {
-//     const tune = await Tune.findOne( {tuneId : id} );
-//     if (!tune) {
-//       return res.status(404).send('No Tune Found!');
-//     }
-
-//     if (req.session && (tune.userId !== req.session.userId && !req.session.isAdmin)) {
-//       return res.status(403).send('Not authorized to delete this tune!');
-//     }
-
-//     // Path to the recordings folder
-//     const recordingsDir = path.join(__dirname, 'uploads/tunes', tune.tuneId);
-
-//     // Delete all the recordings in the directory
-//     if (fs.existsSync(recordingsDir)) {
-//       fs.readdirSync(recordingsDir).forEach(file => {
-//         fs.unlinkSync(path.join(recordingsDir, file));
-//       });
-
-//       fs.rmdirSync(recordingsDir); // Remove the directory
-//     }
-
-//     await Tune.deleteOne({ _id: id }); // Delete the tune from the database
-
-//     return res.status(200).send('Tune deleted successfully');
-//   } catch (error) {
-//     console.error(error);
-//     return res.status(500).send('Error deleting tune');
-//   }
-// });
-
-// Sets
-
-// Posting Sets
-async function createSetId(req, res, next) {
-  console.log("Generating setId...");
-  let attempts = 0;
-  const maxAttempts = 10; // Set a maximum number of attempts to avoid infinite loop
-
-  while (attempts < maxAttempts) {
-    let setId = crypto.randomBytes(16).toString("hex");
-    const existingTune = await Set.findOne({ setId: setId });
-
-    if (!existingTune) {
-      req.setId = setId; // Set tuneId directly on the req object
-      console.log("Generated setId:", setId);
-      return next();
-    }
-
-    console.log("Duplicate setId found, regenerating...");
-    attempts++;
-  }
-
-  console.error(
-    "Failed to generate a unique setId after",
-    maxAttempts,
-    "attempts"
-  );
-  return res.status(500).send("Failed to generate a unique setId");
-}
-
-// Posting Tunes
-app.post("/api/sets", createSetId, (req: CustomRequest, res) => {
+app.post("/api/sets", createSetId, requireAuth, (req: CustomRequest, res) => {
   console.log("Incoming request to /api/sets");
   let setId = req.setId;
   uploadSet(req, res, async (err) => {
@@ -1052,41 +830,7 @@ app.post("/api/sets", createSetId, (req: CustomRequest, res) => {
   });
 });
 
-// Getting a specific Set
-app.get("/api/sets/:id", async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const set = await Set.findOne({ setId: id });
-
-    if (!set) {
-      return res.status(404).send("Set not found");
-    }
-
-    const recordingsDir = path.join(__dirname, "uploads", "sets", set.setId);
-
-    let recordings: string[] = [];
-    if (fs.existsSync(recordingsDir)) {
-      recordings = fs
-        .readdirSync(recordingsDir)
-        .filter((file) => file.endsWith(".mp3"))
-        .map((file) => path.join("/uploads/sets", set.setId, file));
-    }
-
-    const setData = {
-      ...set.toObject(),
-      recordings,
-    };
-
-    return res.status(200).json(setData);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).send("Error retrieving set");
-  }
-});
-
-// Updating a Set
-app.put("/api/sets/:id", async (req: CustomRequest, res) => {
+app.put("/api/sets/:id", requireAuth, async (req: CustomRequest, res) => {
   const user = req.user as IUser;
   req.setId = req.params.id; // Set the setId on the request object
   uploadSet(req, res, async (err) => {
@@ -1188,45 +932,7 @@ app.put("/api/sets/:id", async (req: CustomRequest, res) => {
   });
 });
 
-// Deleting a Set
-// app.delete("/api/sets/:id", async (req, res) => {
-//   const { id } = req.params;
-
-//   try {
-//     const set = await Set.findOne({ setId: id });
-//     if (!set) {
-//       return res.status(404).send("Set not found");
-//     }
-
-//     if (
-//       req.session &&
-//       set.userId !== req.session.userId &&
-//       !req.session.isAdmin
-//     ) {
-//       return res.status(403).send("Not authorized to delete this set!");
-//     }
-
-//     const recordingsDir = path.join(__dirname, "uploads", "sets", set.setId);
-//     if (fs.existsSync(recordingsDir)) {
-//       fs.readdirSync(recordingsDir).forEach((file) => {
-//         fs.unlinkSync(path.join(recordingsDir, file));
-//       });
-//       fs.rmdirSync(recordingsDir);
-//     }
-
-//     await Set.deleteOne({ setId: id });
-
-//     return res.status(200).send("Set deleted successfully");
-//   } catch (error) {
-//     console.error(error);
-//     return res.status(500).send("Error deleting set");
-//   }
-// });
-
-// Session
-
-// Posting a Session
-app.post("/api/sessions", uploadSession, async (req, res) => {
+app.post("/api/sessions", requireAuth, uploadSession, async (req, res) => {
   const user = req.user as IUser;
   if (!user) {
     return res.status(401).send("Not authenticated");
@@ -1262,6 +968,209 @@ app.post("/api/sessions", uploadSession, async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).send("Error creating session");
+  }
+});
+
+app.delete("/api/sessions/:id", requireAuth, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const session = await Session.findOne({ sessionId: id });
+    if (!session) {
+      return res.status(404).send("Session not found");
+    }
+
+    if (
+      req.session &&
+      session.userId !== req.session.userId &&
+      !req.session.isAdmin
+    ) {
+      return res.status(403).send("Not authorized to delete this session!");
+    }
+
+    const recordingsDir = path.join(
+      __dirname,
+      "uploads",
+      "sessions",
+      session.sessionId
+    );
+    if (fs.existsSync(recordingsDir)) {
+      fs.readdirSync(recordingsDir).forEach((file) => {
+        fs.unlinkSync(path.join(recordingsDir, file));
+      });
+      fs.rmdirSync(recordingsDir);
+    }
+
+    await Session.deleteOne({ sessionId: id });
+
+    return res.status(200).send("Session deleted successfully");
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send("Error deleting session");
+  }
+});
+
+// Public routes (no auth required)
+app.get("/api/users-top", async (req, res) => {
+  try {
+    const topUsers = await User.aggregate([
+      {
+        $lookup: {
+          from: "tunes",
+          localField: "userId",
+          foreignField: "userId",
+          as: "tunes",
+        },
+      },
+      {
+        $addFields: {
+          tuneCount: { $size: "$tunes" },
+        },
+      },
+      {
+        $sort: { tuneCount: -1 },
+      },
+      {
+        $limit: 10,
+      },
+      {
+        $project: {
+          userId: 1,
+          firstName: 1,
+          lastName: 1,
+          picture: 1,
+          tuneCount: 1,
+        },
+      },
+    ]);
+
+    return res.status(200).json(topUsers);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send("Error retrieving top users");
+  }
+});
+
+// New Users
+app.get("/api/users-new", async (req, res) => {
+  try {
+    const newUsers = await User.find()
+      .sort({ dateAdded: -1 })
+      .limit(10)
+      .select("userId firstName lastName picture dateAdded");
+
+    return res.status(200).json(newUsers);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send("Error retrieving new users");
+  }
+});
+
+// New Tunes
+app.get("/api/tunes-new", async (req, res) => {
+  try {
+    const newTunes = await Tune.find()
+      .sort({ dateAdded: -1 })
+      .limit(10)
+      .select("tuneId tuneName userId tuneType dateAdded");
+
+    // Get user details for each tune
+    const tunesWithUserDetails = await Promise.all(
+      newTunes.map(async (tune) => {
+        const user = await User.findOne({ userId: tune.userId }).select(
+          "firstName lastName"
+        );
+        return {
+          ...tune.toObject(),
+          userId: tune?.userId,
+          firstName: user?.firstName,
+          lastName: user?.lastName,
+        };
+      })
+    );
+
+    return res.status(200).json(tunesWithUserDetails);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send("Error retrieving new tunes");
+  }
+});
+
+// User Continued
+// Single User
+app.get("/api/users/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const user = await User.findOne({ userId: id });
+
+    if (user) {
+      return res.status(200).json(JSON.stringify(user));
+    } else {
+      return res.status(404).send("User not found");
+    }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send("Error retrieving user");
+  }
+});
+
+// Getting a Specific Tune
+app.get("/api/tunes/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Find the tune by its ID
+    const tune = await Tune.findOne({ tuneId: id });
+
+    // If no tune is found, return a 404 error
+    if (!tune) {
+      return res.status(404).send("Tune not found");
+    }
+
+    // Attach the recordings to the tune object
+    const tuneData = {
+      ...tune.toObject(), // Convert Mongoose document to plain object
+    };
+
+    // Return the tune data along with the recordings
+    return res.status(200).json(tuneData);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send("Error retrieving tune");
+  }
+});
+
+// Getting a specific Set
+app.get("/api/sets/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const set = await Set.findOne({ setId: id });
+
+    if (!set) {
+      return res.status(404).send("Set not found");
+    }
+
+    const recordingsDir = path.join(__dirname, "uploads", "sets", set.setId);
+
+    let recordings: string[] = [];
+    if (fs.existsSync(recordingsDir)) {
+      recordings = fs
+        .readdirSync(recordingsDir)
+        .filter((file) => file.endsWith(".mp3"))
+        .map((file) => path.join("/uploads/sets", set.setId, file));
+    }
+
+    const setData = {
+      ...set.toObject(),
+      recordings,
+    };
+
+    return res.status(200).json(setData);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send("Error retrieving set");
   }
 });
 
@@ -1302,46 +1211,6 @@ app.get("/api/sessions/:id", async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).send("Error retrieving session");
-  }
-});
-
-// Delete a Session
-app.delete("/api/sessions/:id", async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const session = await Session.findOne({ sessionId: id });
-    if (!session) {
-      return res.status(404).send("Session not found");
-    }
-
-    if (
-      req.session &&
-      session.userId !== req.session.userId &&
-      !req.session.isAdmin
-    ) {
-      return res.status(403).send("Not authorized to delete this session!");
-    }
-
-    const recordingsDir = path.join(
-      __dirname,
-      "uploads",
-      "sessions",
-      session.sessionId
-    );
-    if (fs.existsSync(recordingsDir)) {
-      fs.readdirSync(recordingsDir).forEach((file) => {
-        fs.unlinkSync(path.join(recordingsDir, file));
-      });
-      fs.rmdirSync(recordingsDir);
-    }
-
-    await Session.deleteOne({ sessionId: id });
-
-    return res.status(200).send("Session deleted successfully");
-  } catch (error) {
-    console.error(error);
-    return res.status(500).send("Error deleting session");
   }
 });
 
