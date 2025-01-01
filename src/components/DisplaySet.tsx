@@ -122,7 +122,7 @@ const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory }) => {
                     {set.recordingRef.map((recording, index) => (
                       <ReactPlayer
                         key={index}
-                        url={recording}
+                        url={"https://music.charlescrossan.com/" + recording}
                         controls
                         playsinline
                         style={{ width: "80%", height: "30px" }}

@@ -124,7 +124,7 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
                     {tune.recordingRef.map((recording, index) => (
                       <ReactPlayer
                         key={index}
-                        url={recording}
+                        url={"https://music.charlescrossan.com/" + recording}
                         controls
                         playsinline
                         style={{ width: "80%", height: "30px" }}
