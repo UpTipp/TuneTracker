@@ -28,11 +28,19 @@ const AudioPlayer = ({
             controlsList: "nodownload",
             playsInline: true,
             preload: "metadata", // helps multiple files load correctly
+            crossOrigin: "anonymous", // helps Safari load without plugin
+            type: "audio/mpeg",
           },
         },
       }}
       fallback={
-        <audio controls src={fullUrl} className="w-full">
+        <audio
+          controls
+          src={fullUrl}
+          crossOrigin="anonymous" // also set fallback to avoid plugin
+          className="w-full"
+        >
+          <source src={fullUrl} type="audio/mpeg" />
           Your browser does not support the audio element.
         </audio>
       }
