@@ -76,6 +76,7 @@ const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory }) => {
             itemState={set.state}
             itemId={set.setId}
             userId={userId}
+            dataFetch={dataFetch}
           />
           <div>
             {set.link && set.link.length > 0 && (
@@ -170,6 +171,7 @@ const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory }) => {
             itemState={set.state}
             itemId={set.setId}
             userId={userId}
+            dataFetch={dataFetch}
           />
           <div>
             {set.lastPractice && (

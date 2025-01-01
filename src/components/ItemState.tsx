@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { Dropdown } from "flowbite-react";
 import Cookie from "js-cookie";
+import { data } from "autoprefixer";
 
-const ItemState = ({ state, item, id, userId }) => {
+const ItemState = ({ state, item, id, userId, dataFetch }) => {
   const [currentState, setCurrentState] = useState(state);
   const [label, setLabel] = useState(getLabel(state));
   const [className, setClassName] = useState(getClassName(state));
@@ -42,29 +43,26 @@ const ItemState = ({ state, item, id, userId }) => {
   const handleChange = async (newState) => {
     if (checkId && checkId !== userId) {
       alert("You are not authorized to change this state");
-    } else {
-      let body = JSON.stringify({ state: newState, item: item, id: id });
-      console.log("Body, " + body);
-      try {
-        const response = await fetch("/api/users/" + userId + "/state", {
-          method: "PUT",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ state: newState, item: item, id: id }),
-        });
+      return;
+    }
 
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
+    try {
+      const response = await fetch(`/api/users/${userId}/state`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state: newState, item, id }),
+      });
 
-        setCurrentState(newState);
-        setLabel(getLabel(newState));
-        setClassName(getClassName(newState));
-      } catch (error) {
-        console.error("Failed to update state", error);
-      }
+      if (!response.ok) throw new Error("Failed to update state");
+
+      setCurrentState(newState);
+      setLabel(getLabel(newState));
+      setClassName(getClassName(newState));
+
+      dataFetch();
+    } catch (error) {
+      console.error("Error updating state:", error);
     }
   };
 

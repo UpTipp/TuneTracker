@@ -744,6 +744,25 @@ const User = () => {
     });
   };
 
+  // Add this function
+  const handleStateChange = async (type: string) => {
+    // First, update the immediate item
+    await triggerDataFetch();
+
+    // If changing a set or session, we need to update tunes as well
+    if (type === "set" || type === "session") {
+      // Store current tab
+      const currentTab = activeTab;
+
+      // Switch to tunes tab temporarily
+      tabsRef.current?.setActiveTab(0);
+      await triggerDataFetch();
+
+      // Switch back to original tab
+      tabsRef.current?.setActiveTab(currentTab);
+    }
+  };
+
   return (
     <Frame>
       <div className="pt-4 pb-4 pr-1 pl-1 md:pr-10 md:pl-10 lg:pr-20 lg:pl-20">

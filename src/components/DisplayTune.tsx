@@ -78,6 +78,7 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
             itemState={tune.state}
             itemId={tune.tuneId}
             userId={userId}
+            dataFetch={dataFetch}
           />
           <div>
             {tune.link && tune.link.length > 0 && (
@@ -172,6 +173,7 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
             itemState={tune.state}
             itemId={tune.tuneId}
             userId={userId}
+            dataFetch={dataFetch}
           />
           <div>
             {tune.tuneKey && tune.tuneKey !== "" ? (

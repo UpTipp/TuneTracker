@@ -104,7 +104,9 @@ const NewTune = ({ dataFetch }) => {
       });
 
       if (!response.ok) {
-        throw new Error("Network response was not ok");
+        const errorText = await response.text();
+        console.error("Server error:", errorText);
+        throw new Error(`Network response was not ok: ${errorText}`);
       }
 
       const result = await response.json();
@@ -114,6 +116,7 @@ const NewTune = ({ dataFetch }) => {
       onCloseModal();
     } catch (error) {
       console.error("Error:", error);
+      // You might want to show an error message to the user here
     }
   }
 

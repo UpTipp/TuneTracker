@@ -13,12 +13,6 @@ import Session from "./models/Session";
 /*  Important Modules!  */
 import dotenv from "dotenv";
 import express, { Request } from "express";
-
-// Extend the Request interface to include tuneId
-interface CustomRequest extends Request {
-  setId: any;
-  tuneId?: string;
-}
 import cors from "cors";
 import path from "path";
 import mongoose from "mongoose";
@@ -31,6 +25,12 @@ import multer from "multer";
 import fs from "fs";
 
 dotenv.config(); // Initialize dotenv
+
+// Extend the Request interface to include tuneId
+interface CustomRequest extends Request {
+  setId: any;
+  tuneId?: string;
+}
 
 /*  Database Setup!  */
 const mongoDB: string = process.env.MONGO_URI!;
@@ -62,11 +62,13 @@ app.use(express.json());
 // Add this line to parse form-data request bodies
 app.use(express.urlencoded({ extended: true }));
 
+// Update session configuration - make sure this comes BEFORE any route handlers
 app.use(
   session({
     secret: secret,
-    resave: true, // Changed to true to ensure session is saved
+    resave: false,
     saveUninitialized: false,
+    proxy: true,
     cookie: {
       maxAge: 24 * 60 * 60 * 1000,
       secure: process.env.NODE_ENV === "production",
@@ -76,11 +78,9 @@ app.use(
         process.env.NODE_ENV === "production"
           ? ".charlescrossan.com"
           : undefined,
-      path: "/",
     },
     store: sessionStore,
-    name: "sessionId", // Explicit session cookie name
-    rolling: true, // Refresh session with each request
+    name: "sessionId", // This ensures the cookie is named "sessionId"
   })
 );
 
@@ -116,16 +116,28 @@ app.use((req, res, next) => {
   next();
 });
 
-// Use CORS middleware
+// Use CORS middleware with updated configuration
 app.use(
   cors({
     origin:
       process.env.NODE_ENV === "production"
         ? "https://music.charlescrossan.com"
-        : "http://localhost:3000",
+        : "http://localhost:3002",
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
   })
 );
+
+// Add debug middleware for cookie inspection
+app.use((req, res, next) => {
+  console.log("\n=== Cookie Debug Info ===");
+  console.log("Raw Cookies Header:", req.headers.cookie);
+  console.log("Parsed Cookies:", req.cookies);
+  console.log("Session Cookie:", req.sessionID);
+  console.log("=== End Cookie Debug ===\n");
+  next();
+});
 
 // Serve static files from the 'build' directory
 app.use("/", express.static(path.join(__dirname, "./build")));
@@ -228,21 +240,16 @@ passport.use(
 // Serializing and Deserializing User
 passport.serializeUser(
   (user: Express.User, done: (err: any, id?: any) => void) => {
-    const typedUser = user as IUser;
-    done(null, typedUser.userId); // Only store userId
+    done(null, user);
   }
 );
 
 passport.deserializeUser(
-  async (userId: string, done: (err: any, user?: any) => void) => {
+  async (user: Express.User, done: (err: any, user?: any) => void) => {
     try {
-      const user = await User.findOne({ userId: userId });
-      if (!user) {
-        return done(new Error("User not found"), null);
-      }
-      done(null, user);
+      done(null, user); // Return the user object after fetching from the database
     } catch (err) {
-      done(err, null);
+      done(err, null); // Handle error
     }
   }
 );
@@ -366,7 +373,7 @@ app.get(
     req.session.isAdmin = user.isAdmin;
     req.session.email = user.email;
 
-    // Force session save and wait for completion
+    // Force session save before setting cookies
     req.session.save((err) => {
       if (err) {
         console.error("Session save error:", err);
@@ -553,6 +560,7 @@ app.put("/api/users/:id/state", requireAuth, async (req, res) => {
       return res.status(404).send("Item not found in user's states");
     }
 
+    // Update the main item's state
     let change = false;
     for (let item of itemStates) {
       if (item[itemName + "Id"] == itemId) {
@@ -563,6 +571,65 @@ app.put("/api/users/:id/state", requireAuth, async (req, res) => {
 
     if (!change) {
       return res.status(404).send("Item not found in user's states");
+    }
+
+    // Handle nested items states
+    if (itemName === "set") {
+      // Find the set to get its tunes
+      const set = await Set.findOne({ setId: itemId });
+      if (set && set.tuneIds) {
+        // Update state for all tunes in the set
+        for (const tuneId of set.tuneIds) {
+          const tuneState = user.tuneStates.find(
+            (state) => state.tuneId === tuneId
+          );
+          if (tuneState) {
+            tuneState.state = state;
+          }
+        }
+      }
+    } else if (itemName === "session") {
+      // Find the session to get its tunes and sets
+      const session = await Session.findOne({ sessionId: itemId });
+      if (session) {
+        // Update state for all tunes in the session
+        if (session.tuneIds) {
+          for (const tuneId of session.tuneIds) {
+            const tuneState = user.tuneStates.find(
+              (state) => state.tuneId === tuneId
+            );
+            if (tuneState) {
+              tuneState.state = state;
+            }
+          }
+        }
+        // Update state for all sets in the session and their tunes
+        if (session.setIds) {
+          for (const setId of session.setIds) {
+            // Update the set's state
+            const setState = user.setStates.find(
+              (state) => state.setId === setId
+            );
+            if (setState) {
+              setState.state = state;
+            }
+
+            // Find the set to get its tunes
+            const set = await Set.findOne({ setId });
+            if (set && set.tuneIds) {
+              // Update state for all tunes in the set
+              for (const tuneId of set.tuneIds) {
+                const tuneState = user.tuneStates.find(
+                  (state) => state.tuneId === tuneId
+                );
+                if (tuneState) {
+                  tuneState.state = state;
+                }
+              }
+            }
+          }
+        }
+      }
     }
 
     await user.save();
@@ -606,7 +673,67 @@ app.post("/api/users/:id/:type", requireAuth, async (req, res) => {
       return res.status(404).send("Item not found in user's states");
     }
 
-    state.lastPractice = new Date();
+    const currentTime = new Date();
+    state.lastPractice = currentTime;
+
+    // Handle nested items
+    if (type === "set") {
+      // Find the set to get its tunes
+      const set = await Set.findOne({ setId: stateId });
+      if (set && set.tuneIds) {
+        // Update lastPractice for all tunes in the set
+        for (const tuneId of set.tuneIds) {
+          const tuneState = user.tuneStates.find(
+            (state) => state.tuneId === tuneId
+          );
+          if (tuneState) {
+            tuneState.lastPractice = currentTime;
+          }
+        }
+      }
+    } else if (type === "session") {
+      // Find the session to get its tunes and sets
+      const session = await Session.findOne({ sessionId: stateId });
+      if (session) {
+        // Update lastPractice for all tunes in the session
+        if (session.tuneIds) {
+          for (const tuneId of session.tuneIds) {
+            const tuneState = user.tuneStates.find(
+              (state) => state.tuneId === tuneId
+            );
+            if (tuneState) {
+              tuneState.lastPractice = currentTime;
+            }
+          }
+        }
+        // Update lastPractice for all sets in the session
+        if (session.setIds) {
+          for (const setId of session.setIds) {
+            // Update the set's lastPractice
+            const setState = user.setStates.find(
+              (state) => state.setId === setId
+            );
+            if (setState) {
+              setState.lastPractice = currentTime;
+            }
+
+            // Find the set to get its tunes
+            const set = await Set.findOne({ setId });
+            if (set && set.tuneIds) {
+              // Update lastPractice for all tunes in the set
+              for (const tuneId of set.tuneIds) {
+                const tuneState = user.tuneStates.find(
+                  (state) => state.tuneId === tuneId
+                );
+                if (tuneState) {
+                  tuneState.lastPractice = currentTime;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
 
     await user.save();
     return res.status(201).send("User state updated successfully");
@@ -1303,15 +1430,24 @@ app.get("/logout/", (req, res) => {
   req.logout((err) => {
     if (err) {
       console.error("Logout error:", err);
-      return res.status(500).send("Error during logout");
+      return res.status(500).send("Logout failed");
     }
 
     // Destroy the session
-    req.session.destroy((err) => {
+    req.session.destroy(async (err) => {
       if (err) {
         console.error("Session destruction error:", err);
-        return res.status(500).send("Error destroying session");
+        return res.status(500).send("Session destruction failed");
       }
+
+      // Remove session from MongoDB
+      await sessionStore.destroy(req.sessionID, (err) => {
+        if (err) {
+          console.error("Failed to remove session from MongoDB:", err);
+        } else {
+          console.log("Session removed from MongoDB");
+        }
+      });
 
       // Clear all cookies
       res.clearCookie("sessionId", {

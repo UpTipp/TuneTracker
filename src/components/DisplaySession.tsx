@@ -78,6 +78,7 @@ const DisplaySession = ({ session, userId, dataFetch, goTo, itemMemory }) => {
             itemState={session.state}
             itemId={session.sessionId}
             userId={userId}
+            dataFetch={dataFetch}
           />
           <div>
             {/* Links section */}
@@ -180,6 +181,7 @@ const DisplaySession = ({ session, userId, dataFetch, goTo, itemMemory }) => {
             itemState={session.state}
             itemId={session.sessionId}
             userId={userId}
+            dataFetch={dataFetch}
           />
           <div>
             {session.lastPractice && (
