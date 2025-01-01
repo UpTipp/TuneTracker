@@ -11,6 +11,7 @@ import UpdatePractice from "./UpdatePractice";
 import UpdateTune from "./UpdateTune";
 import AddItem from "./AddItem";
 import CopyItem from "./CopyItem";
+import AudioPlayer from "./AudioPlayer";
 
 const customCard = {
   root: {
@@ -122,28 +123,9 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
                   <h6 className="text-md">Recording(s):</h6>
                   <div className="p-2 border border-gray-600 bg-gray-300 bg-opacity-50 rounded-md non-clickable">
                     {tune.recordingRef.map((recording, index) => (
-                      <ReactPlayer
-                        key={index}
-                        url={"https://music.charlescrossan.com/" + recording}
-                        controls
-                        playsinline
-                        style={{ width: "80%", height: "30px" }}
-                        width="100%"
-                        height="100%"
-                        config={{
-                          file: {
-                            attributes: {
-                              controlsList: "nodownload",
-                              playsInline: true,
-                            },
-                            forceAudio: true,
-                          },
-                        }}
-                        fallback={
-                          <audio controls src={recording} className="w-full">
-                            Your browser does not support the audio element.
-                          </audio>
-                        }
+                      <AudioPlayer
+                        key={`${tune.tuneId}-${recording}-${index}`} // combines tuneId with recording
+                        url={recording}
                         className="ml-2"
                       />
                     ))}

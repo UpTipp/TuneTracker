@@ -1,5 +1,6 @@
 import { FileInput, Label, Button } from "flowbite-react";
 import ReactPlayer from "react-player";
+import AudioPlayer from "./AudioPlayer";
 
 interface FileUploadSectionProps {
   files: File[];
@@ -29,29 +30,7 @@ const FileUploadSection = ({
       <ul className="mt-2">
         {fileURLs.map((url, index) => (
           <li key={index} className="flex items-center">
-            <ReactPlayer
-              url={url}
-              controls
-              playsinline
-              style={{ width: "80%", height: "30px" }}
-              width="100%"
-              height="100%"
-              config={{
-                file: {
-                  attributes: {
-                    controlsList: "nodownload",
-                    playsInline: true,
-                  },
-                  forceAudio: true,
-                },
-              }}
-              fallback={
-                <audio controls src={url} className="w-full">
-                  Your browser does not support the audio element.
-                </audio>
-              }
-              className="ml-2"
-            />
+            <AudioPlayer url={url} className="ml-2" />
             <Button
               onClick={() => onFileRemove(index)}
               className="ml-2"

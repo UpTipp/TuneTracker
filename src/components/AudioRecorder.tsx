@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button, Label } from "flowbite-react";
 
 interface AudioRecorderProps {
@@ -8,10 +8,21 @@ interface AudioRecorderProps {
 const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [unsupported, setUnsupported] = useState(false);
   const mediaRecorderRef = useRef(null);
   const timeIntervalRef = useRef(null);
 
+  useEffect(() => {
+    if (!window.MediaRecorder) {
+      setUnsupported(true);
+    }
+  }, []);
+
   const startRecording = async () => {
+    if (!window.MediaRecorder) {
+      alert("MediaRecorder not supported in this browser.");
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
@@ -53,23 +64,32 @@ const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
 
   return (
     <div>
-      <div className="mb-2 block">
-        <Label value="Record Audio" />
-      </div>
-      <div className="flex items-center gap-2">
-        <Button
-          color={isRecording ? "red" : "blue"}
-          onClick={isRecording ? stopRecording : startRecording}
-        >
-          {isRecording ? "Stop Recording" : "Start Recording"}
-        </Button>
-        {isRecording && (
-          <span className="text-red-600">
-            Recording: {Math.floor(recordingTime / 60)}:
-            {String(recordingTime % 60).padStart(2, "0")}
-          </span>
-        )}
-      </div>
+      {unsupported && (
+        <p className="text-red-600 text-sm">
+          Recording not supported in this browser.
+        </p>
+      )}
+      {!unsupported && (
+        <>
+          <div className="mb-2 block">
+            <Label value="Record Audio" />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              color={isRecording ? "red" : "blue"}
+              onClick={isRecording ? stopRecording : startRecording}
+            >
+              {isRecording ? "Stop Recording" : "Start Recording"}
+            </Button>
+            {isRecording && (
+              <span className="text-red-600">
+                Recording: {Math.floor(recordingTime / 60)}:
+                {String(recordingTime % 60).padStart(2, "0")}
+              </span>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 };
