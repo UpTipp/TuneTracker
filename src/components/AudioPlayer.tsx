@@ -11,11 +11,20 @@ const AudioPlayer = ({
   className = "",
   baseUrl = "https://music.charlescrossan.com/",
 }: AudioPlayerProps) => {
+  const audioRef = useRef<HTMLAudioElement>(null);
   const fullUrl = url.startsWith("http") ? url : baseUrl + url;
+
+  useEffect(() => {
+    // Reset audio element when URL changes
+    if (audioRef.current) {
+      audioRef.current.load();
+    }
+  }, [fullUrl]);
 
   return (
     <div className={className}>
       <audio
+        ref={audioRef}
         controls
         controlsList="nodownload"
         preload="metadata"

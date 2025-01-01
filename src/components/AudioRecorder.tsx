@@ -25,21 +25,33 @@ const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: "audio/webm;codecs=opus", // Better cross-browser support
+        audioBitsPerSecond: 128000,
+      });
       mediaRecorderRef.current = mediaRecorder;
       const chunks = [];
 
-      mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
-      mediaRecorder.onstop = () => {
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        // Create blob with proper chunks
         const blob = new Blob(chunks, { type: "audio/mpeg" });
+
+        // Convert to MP3 if needed (you might want to add a conversion step here)
         const file = new File([blob], `recording-${Date.now()}.mp3`, {
           type: "audio/mpeg",
+          lastModified: Date.now(),
         });
+
         const url = URL.createObjectURL(blob);
         onRecordingComplete(file, url);
       };
 
-      mediaRecorder.start();
+      // Request data in smaller chunks
+      mediaRecorder.start(1000); // capture in 1-second chunks
       setIsRecording(true);
 
       timeIntervalRef.current = setInterval(() => {
