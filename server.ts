@@ -154,6 +154,88 @@ app.use(
   express.static(path.join(__dirname, "uploads", "sessions"))
 );
 
+// Add MIME type configuration
+app.use((req, res, next) => {
+  if (req.path.endsWith(".mp3")) {
+    res.type("audio/mpeg");
+    res.set({
+      "Accept-Ranges": "bytes",
+      "Cache-Control": "public, max-age=0",
+    });
+  }
+  next();
+});
+
+// Update static file serving configuration
+app.use(
+  "/uploads/tunes",
+  express.static(path.join(__dirname, "uploads", "tunes"), {
+    setHeaders: (res, path) => {
+      if (path.endsWith(".mp3")) {
+        res.set({
+          "Accept-Ranges": "bytes",
+          "Content-Type": "audio/mpeg",
+          "Cache-Control": "public, max-age=0",
+        });
+      }
+    },
+  })
+);
+
+app.use(
+  "/uploads/sets",
+  express.static(path.join(__dirname, "uploads", "sets"), {
+    setHeaders: (res, path) => {
+      if (path.endsWith(".mp3")) {
+        res.set({
+          "Accept-Ranges": "bytes",
+          "Content-Type": "audio/mpeg",
+          "Cache-Control": "public, max-age=0",
+        });
+      }
+    },
+  })
+);
+
+app.use(
+  "/uploads/sessions",
+  express.static(path.join(__dirname, "uploads", "sessions"), {
+    setHeaders: (res, path) => {
+      if (path.endsWith(".mp3")) {
+        res.set({
+          "Accept-Ranges": "bytes",
+          "Content-Type": "audio/mpeg",
+          "Cache-Control": "public, max-age=0",
+        });
+      }
+    },
+  })
+);
+
+// Add byte-range request handler
+app.get("*/uploads/**/*.mp3", (req, res, next) => {
+  if (req.headers.range) {
+    const filePath = path.join(__dirname, req.path);
+    const stat = fs.statSync(filePath);
+    const range = req.headers.range;
+    const parts = range.replace(/bytes=/, "").split("-");
+    const start = parseInt(parts[0], 10);
+    const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
+    const chunksize = end - start + 1;
+
+    res.writeHead(206, {
+      "Content-Range": `bytes ${start}-${end}/${stat.size}`,
+      "Accept-Ranges": "bytes",
+      "Content-Length": chunksize,
+      "Content-Type": "audio/mpeg",
+    });
+
+    fs.createReadStream(filePath, { start, end }).pipe(res);
+  } else {
+    next();
+  }
+});
+
 // Google Passport Continued
 const GOOGLE_CLIENT_ID: string = process.env.GOOGLE_CLIENT_ID!;
 const GOOGLE_CLIENT_SECRET: string = process.env.GOOGLE_CLIENT_SECRET!;
