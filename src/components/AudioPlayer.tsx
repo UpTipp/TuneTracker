@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from "react";
 import ReactPlayer from "react-player";
 
 interface AudioPlayerProps {
@@ -11,33 +12,59 @@ const AudioPlayer = ({
   className = "",
   baseUrl = "https://music.charlescrossan.com/",
 }: AudioPlayerProps) => {
+  const [useNativePlayer, setUseNativePlayer] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const fullUrl = url.startsWith("http") ? url : baseUrl + url;
 
-  return (
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.load();
+    }
+  }, [fullUrl]);
+
+  const handleReactPlayerError = () => {
+    console.log("ReactPlayer failed, falling back to native audio");
+    setUseNativePlayer(true);
+  };
+
+  return useNativePlayer ? (
+    // Native HTML5 Audio Player
+    <div className={className}>
+      <audio
+        ref={audioRef}
+        controls
+        controlsList="nodownload"
+        preload="metadata"
+        className="w-full h-8"
+      >
+        <source src={fullUrl} type="audio/mpeg" />
+        Your browser does not support the audio element.
+      </audio>
+    </div>
+  ) : (
+    // React Player with fallback
     <ReactPlayer
-      key={fullUrl} // ensures unique re-render if url changes
       url={fullUrl}
       controls
       playsinline
       width="100%"
       height="30px"
+      onError={handleReactPlayerError}
       config={{
         file: {
           forceAudio: true,
           attributes: {
             controlsList: "nodownload",
             playsInline: true,
-            preload: "metadata", // helps multiple files load correctly
-            crossOrigin: "anonymous", // helps Safari load without plugin
-            type: "audio/mpeg",
+            preload: "metadata",
           },
         },
       }}
       fallback={
         <audio
           controls
-          src={fullUrl}
-          crossOrigin="anonymous" // also set fallback to avoid plugin
+          controlsList="nodownload"
+          preload="metadata"
           className="w-full"
         >
           <source src={fullUrl} type="audio/mpeg" />
