@@ -107,7 +107,6 @@ const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
               </span>
             )}
           </div>
-          {audioURL && <audio src={audioURL} controls />}
         </>
       )}
     </div>

@@ -30,7 +30,7 @@ const FileUploadSection = ({
       <ul className="mt-2">
         {fileURLs.map((url, index) => (
           <li key={index} className="flex items-center">
-            <AudioPlayer url={url} className="ml-2" />
+            <AudioPlayer url={url} className="w-full ml-2" />
             <Button
               onClick={() => onFileRemove(index)}
               className="ml-2"

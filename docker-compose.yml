@@ -10,5 +10,7 @@ services:
       - GOOGLE_CLIENT_ID=your_google_client_id
       - GOOGLE_CLIENT_SECRET=your_google_client_secret
       - NODE_ENV=production
+      - MINIO_ACCESS_KEY=your_minio_access_key
+      - MINIO_SECRET_KEY=your_minio_secret_key
       - CI=true
     restart: unless-stopped
