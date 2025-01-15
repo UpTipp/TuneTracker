@@ -10,6 +10,7 @@ import {
 import FileUploadSection from "./FileUploadSection";
 import LinksSection from "./LinksSection";
 import AudioRecorder from "./AudioRecorder";
+import AudioPlayer from "./AudioPlayer";
 
 const UpdateTune = ({ type, itemId, tune, dataFetch }) => {
   // Modal Setup
@@ -291,13 +292,28 @@ const UpdateTune = ({ type, itemId, tune, dataFetch }) => {
             />
 
             <AudioRecorder onRecordingComplete={handleRecordingComplete} />
-
             <FileUploadSection
               files={files}
               fileURLs={fileURLs}
               onFileAdd={addFile}
-              onFileRemove={removeFile}
             />
+
+            {/* Files */}
+            <ul className="mt-2">
+              {fileURLs.map((url, i) => (
+                <li key={i} className="flex items-center">
+                  <AudioPlayer url={url} className="w-full" />
+                  <Button
+                    onClick={() => removeFile(i)}
+                    className="ml-2"
+                    size="xs"
+                    color="red"
+                  >
+                    Remove
+                  </Button>
+                </li>
+              ))}
+            </ul>
 
             {/* Comments */}
             <div>

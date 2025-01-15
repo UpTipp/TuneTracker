@@ -29,6 +29,7 @@ import SearchDropdown from "./SearchDropdown";
 import FileUploadSection from "./FileUploadSection";
 import LinksSection from "./LinksSection";
 import AudioRecorder from "./AudioRecorder";
+import AudioPlayer from "./AudioPlayer";
 
 const SortableItem = ({ tune, onRemove }) => {
   const { attributes, listeners, setNodeRef, transform, transition } =
@@ -280,13 +281,28 @@ const UpdateSet = ({
             />
 
             <AudioRecorder onRecordingComplete={handleRecordingComplete} />
-
             <FileUploadSection
               files={files}
               fileURLs={fileURLs}
               onFileAdd={addFile}
-              onFileRemove={removeFile}
             />
+
+            {/* Files */}
+            <ul className="mt-2">
+              {fileURLs.map((url, i) => (
+                <li key={i} className="flex items-center">
+                  <AudioPlayer url={url} className="w-full" />
+                  <Button
+                    onClick={() => removeFile(i)}
+                    className="ml-2"
+                    size="xs"
+                    color="red"
+                  >
+                    Remove
+                  </Button>
+                </li>
+              ))}
+            </ul>
 
             <SearchDropdown
               label="Search Tunes"

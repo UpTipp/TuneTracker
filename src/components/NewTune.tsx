@@ -27,7 +27,7 @@ const NewTune = ({ dataFetch }) => {
   const [comments, setComments] = useState("");
   const [fileURLs, setFileURLs] = useState<string[]>([]);
 
-  const handleRecordingComplete = (url: string, file: File) => {
+  const handleRecordingComplete = (file: File, url: string) => {
     setFiles((prev) => [...prev, file]);
     setFileURLs((prev) => [...prev, url]);
   };
