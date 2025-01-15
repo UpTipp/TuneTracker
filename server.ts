@@ -310,9 +310,8 @@ passport.deserializeUser(
 
 // Initialize Minio Client
 const minioClient = new Client({
-  endPoint: "localhost",
+  endPoint: process.env.MINIO_ENDPOINT,
   port: 9001,
-  useSSL: true,
   accessKey: process.env.MINIO_ACCESS,
   secretKey: process.env.MINIO_SECRET,
 });
@@ -340,6 +339,10 @@ const uploadToMinio = async (file: Express.Multer.File, path: string) => {
     file.size,
     metaData
   );
+
+  // Generate the URL for the uploaded file
+  const fileUrl = `${process.env.MAIN_DOMAIN}/audio/${path}`;
+  return fileUrl;
 };
 
 // Multer upload config (limit file size to 100MB, adjust if necessary)
@@ -748,87 +751,88 @@ app.post("/api/users/:id/:type", requireAuth, async (req, res) => {
   }
 });
 
-app.post("/api/tunes", createTuneId, requireAuth, (req: CustomRequest, res) => {
-  console.log("[POST /api/tunes] Creating new tune");
-  console.log("TuneId:", req.tuneId);
-  const currentUser = req.user as IUser;
-  if (!currentUser) {
-    return res.status(401).send("Not authenticated");
-  }
-
-  console.log("Session data:", req.session);
-  console.log("Incoming request to /api/tunes");
-  let tuneId = req.tuneId;
-  uploadMinio(req, res, async (err) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).send("Error uploading files");
+app.post(
+  "/api/tunes",
+  createTuneId,
+  requireAuth,
+  async (req: CustomRequest, res) => {
+    console.log("[POST /api/tunes] Creating new tune");
+    console.log("TuneId:", req.tuneId);
+    const currentUser = req.user as IUser;
+    if (!currentUser) {
+      return res.status(401).send("Not authenticated");
     }
 
-    const { tuneName, tuneType, author, tuneKey, links, comments } = req.body;
-
-    if (!req.session || !req.session.userId) {
-      return res.status(403).send("Not Logged In!");
-    }
-
-    if (!tuneName || !tuneType) {
-      return res
-        .status(400)
-        .send("Missing required fields: tuneName or tuneType");
-    }
-
-    try {
-      // Ensure req.files is treated as an array
-      const files = req.files as Express.Multer.File[];
-
-      const newTune = new Tune({
-        tuneId,
-        userId: currentUser.userId, // User ID from session
-        tuneName,
-        tuneType,
-        tuneKey,
-        author,
-        recordingRef: [], // Reset or initialize as empty before pushing new paths
-        links,
-        comments,
-        dateAdded: new Date(),
-      });
-
-      for (const file of files) {
-        const objectName = `tunes/${tuneId}/${Date.now()}-${file.originalname}`;
-        await minioClient.putObject(
-          "audio-files",
-          objectName,
-          file.buffer,
-          file.size
-        );
-        const minioLink = `https://files.charlescrossan.com/${objectName}`;
-        newTune.recordingRef.push(minioLink);
+    console.log("Session data:", req.session);
+    console.log("Incoming request to /api/tunes");
+    let tuneId = req.tuneId;
+    uploadMinio(req, res, async (err) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).send("Error uploading files");
       }
 
-      await newTune.save();
+      const { tuneName, tuneType, author, tuneKey, links, comments } = req.body;
 
-      // Add the tune to the user's tuneStates
-      let user = await User.findOne({ userId: currentUser.userId });
-      user.tuneStates.push({
-        tuneId,
-        state: "want-to-learn",
-        lastPractice: new Date(),
-        dateAdded: new Date(),
-        comments: "",
-        hidden: false,
-      });
-      await user.save();
+      if (!req.session || !req.session.userId) {
+        return res.status(403).send("Not Logged In!");
+      }
 
-      return res
-        .status(201)
-        .json({ message: "Tune created successfully", tune: newTune });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).send("Error creating tune");
-    }
-  });
-});
+      if (!tuneName || !tuneType) {
+        return res
+          .status(400)
+          .send("Missing required fields: tuneName or tuneType");
+      }
+
+      try {
+        // Ensure req.files is treated as an array
+        const files = req.files as Express.Multer.File[];
+
+        const newTune = new Tune({
+          tuneId,
+          userId: currentUser.userId, // User ID from session
+          tuneName,
+          tuneType,
+          tuneKey,
+          author,
+          recordingRef: [], // Reset or initialize as empty before pushing new paths
+          links,
+          comments,
+          dateAdded: new Date(),
+        });
+
+        for (const file of files) {
+          const objectName = `tunes/${tuneId}/${Date.now()}-${
+            file.originalname
+          }`;
+          const minioLink = await uploadToMinio(file, objectName);
+          newTune.recordingRef.push(minioLink);
+        }
+
+        await newTune.save();
+
+        // Add the tune to the user's tuneStates
+        let user = await User.findOne({ userId: currentUser.userId });
+        user.tuneStates.push({
+          tuneId,
+          state: "want-to-learn",
+          lastPractice: new Date(),
+          dateAdded: new Date(),
+          comments: "",
+          hidden: false,
+        });
+        await user.save();
+
+        return res
+          .status(201)
+          .json({ message: "Tune created successfully", tune: newTune });
+      } catch (error) {
+        console.error(error);
+        return res.status(500).send("Error creating tune");
+      }
+    });
+  }
+);
 
 app.put("/api/tunes/:id", requireAuth, async (req: CustomRequest, res) => {
   console.log("[PUT /api/tunes/:id] Updating tune:", req.params.id);
@@ -877,13 +881,7 @@ app.put("/api/tunes/:id", requireAuth, async (req: CustomRequest, res) => {
       // Append new recordings and give them sequential names
       for (const file of newFiles) {
         const objectName = `tunes/${id}/${Date.now()}-${file.originalname}`;
-        await minioClient.putObject(
-          "audio-files",
-          objectName,
-          file.buffer,
-          file.size
-        );
-        const minioLink = `https://files.charlescrossan.com/${objectName}`;
+        const minioLink = await uploadToMinio(file, objectName);
         updatedRecordings.push(minioLink);
       }
 
@@ -983,13 +981,7 @@ app.post("/api/sets", createSetId, requireAuth, (req: CustomRequest, res) => {
 
       for (const file of files) {
         const objectName = `sets/${setId}/${Date.now()}-${file.originalname}`;
-        await minioClient.putObject(
-          "audio-files",
-          objectName,
-          file.buffer,
-          file.size
-        );
-        const minioLink = `https://files.charlescrossan.com/${objectName}`;
+        const minioLink = await uploadToMinio(file, objectName);
         newSet.recordingRef.push(minioLink);
       }
 
@@ -1064,13 +1056,7 @@ app.put("/api/sets/:id", requireAuth, async (req: CustomRequest, res) => {
       // Append new recordings and give them sequential names
       for (const file of newFiles) {
         const objectName = `sets/${id}/${Date.now()}-${file.originalname}`;
-        await minioClient.putObject(
-          "audio-files",
-          objectName,
-          file.buffer,
-          file.size
-        );
-        const minioLink = `https://files.charlescrossan.com/${objectName}`;
+        const minioLink = await uploadToMinio(file, objectName);
         updatedRecordings.push(minioLink);
       }
 
@@ -1133,13 +1119,7 @@ app.post("/api/sessions", requireAuth, uploadMinio, async (req, res) => {
       const objectName = `sessions/${sessionId}/${Date.now()}-${
         file.originalname
       }`;
-      await minioClient.putObject(
-        "audio-files",
-        objectName,
-        file.buffer,
-        file.size
-      );
-      const minioLink = `https://files.charlescrossan.com/${objectName}`;
+      const minioLink = await uploadToMinio(file, objectName);
       newSession.recordingRef.push(minioLink);
     }
 
