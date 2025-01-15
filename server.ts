@@ -795,16 +795,15 @@ app.post("/api/tunes", createTuneId, requireAuth, (req: CustomRequest, res) => {
       });
 
       for (const file of files) {
-        const fileName = `${req.tuneId}/${Date.now()}-${file.originalname}`;
-        const metaData = { "Content-Type": "audio/mpeg" };
+        const objectName = `tunes/${tuneId}/${Date.now()}-${file.originalname}`;
         await minioClient.putObject(
           "audio-files",
-          `tunes/${fileName}`,
+          objectName,
           file.buffer,
-          file.size,
-          metaData
+          file.size
         );
-        newTune.recordingRef.push(`tunes/${fileName}`);
+        const minioLink = `https://files.charlescrossan.com/${objectName}`;
+        newTune.recordingRef.push(minioLink);
       }
 
       await newTune.save();
@@ -877,16 +876,15 @@ app.put("/api/tunes/:id", requireAuth, async (req: CustomRequest, res) => {
 
       // Append new recordings and give them sequential names
       for (const file of newFiles) {
-        const fileName = `${id}/${Date.now()}-${file.originalname}`;
-        const metaData = { "Content-Type": "audio/mpeg" };
+        const objectName = `tunes/${id}/${Date.now()}-${file.originalname}`;
         await minioClient.putObject(
           "audio-files",
-          `tunes/${fileName}`,
+          objectName,
           file.buffer,
-          file.size,
-          metaData
+          file.size
         );
-        updatedRecordings.push(`tunes/${fileName}`);
+        const minioLink = `https://files.charlescrossan.com/${objectName}`;
+        updatedRecordings.push(minioLink);
       }
 
       // Update the tune with the new list of recordings
@@ -984,16 +982,15 @@ app.post("/api/sets", createSetId, requireAuth, (req: CustomRequest, res) => {
       });
 
       for (const file of files) {
-        const fileName = `${req.setId}/${Date.now()}-${file.originalname}`;
-        const metaData = { "Content-Type": "audio/mpeg" };
+        const objectName = `sets/${setId}/${Date.now()}-${file.originalname}`;
         await minioClient.putObject(
           "audio-files",
-          `sets/${fileName}`,
+          objectName,
           file.buffer,
-          file.size,
-          metaData
+          file.size
         );
-        newSet.recordingRef.push(`sets/${fileName}`);
+        const minioLink = `https://files.charlescrossan.com/${objectName}`;
+        newSet.recordingRef.push(minioLink);
       }
 
       await newSet.save();
@@ -1066,14 +1063,15 @@ app.put("/api/sets/:id", requireAuth, async (req: CustomRequest, res) => {
 
       // Append new recordings and give them sequential names
       for (const file of newFiles) {
-        const fileName = `${id}/${Date.now()}-${file.originalname}`;
+        const objectName = `sets/${id}/${Date.now()}-${file.originalname}`;
         await minioClient.putObject(
           "audio-files",
-          `sets/${fileName}`,
+          objectName,
           file.buffer,
           file.size
         );
-        updatedRecordings.push(`sets/${fileName}`);
+        const minioLink = `https://files.charlescrossan.com/${objectName}`;
+        updatedRecordings.push(minioLink);
       }
 
       // Update the tune with the new list of recordings
@@ -1132,16 +1130,17 @@ app.post("/api/sessions", requireAuth, uploadMinio, async (req, res) => {
     });
 
     for (const file of files) {
-      const fileName = `${req.body.sessionId}/${Date.now()}-${
+      const objectName = `sessions/${sessionId}/${Date.now()}-${
         file.originalname
       }`;
       await minioClient.putObject(
         "audio-files",
-        `sessions/${fileName}`,
+        objectName,
         file.buffer,
         file.size
       );
-      newSession.recordingRef.push(`sessions/${fileName}`);
+      const minioLink = `https://files.charlescrossan.com/${objectName}`;
+      newSession.recordingRef.push(minioLink);
     }
 
     await newSession.save();
