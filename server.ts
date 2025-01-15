@@ -23,6 +23,7 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth2";
 import crypto from "crypto";
 import multer from "multer";
 import fs from "fs";
+import { Client } from "minio";
 
 dotenv.config(); // Initialize dotenv
 
@@ -141,100 +142,69 @@ app.use((req, res, next) => {
 
 // Serve static files from the 'build' directory
 app.use("/", express.static(path.join(__dirname, "./build")));
-app.use(
-  "/uploads/tunes",
-  express.static(path.join(__dirname, "uploads", "tunes"))
-);
-app.use(
-  "/uploads/sets",
-  express.static(path.join(__dirname, "uploads", "sets"))
-);
-app.use(
-  "/uploads/sessions",
-  express.static(path.join(__dirname, "uploads", "sessions"))
-);
 
-// Add MIME type configuration
-app.use((req, res, next) => {
-  if (req.path.endsWith(".mp3")) {
-    res.type("audio/mpeg");
-    res.set({
-      "Accept-Ranges": "bytes",
-      "Cache-Control": "public, max-age=0",
-    });
-  }
-  next();
-});
+// Remove all existing static file serving for audio files and replace with this:
+const serveAudio = (directory: string) => {
+  return (req, res, next) => {
+    if (!req.path.endsWith(".mp3")) {
+      return next();
+    }
 
-// Update static file serving configuration
-app.use(
-  "/uploads/tunes",
-  express.static(path.join(__dirname, "uploads", "tunes"), {
-    setHeaders: (res, path) => {
-      if (path.endsWith(".mp3")) {
-        res.set({
-          "Accept-Ranges": "bytes",
-          "Content-Type": "audio/mpeg",
-          "Cache-Control": "public, max-age=0",
-        });
-      }
-    },
-  })
-);
+    const filePath = path.join(__dirname, directory, req.path);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).send("File not found");
+    }
 
-app.use(
-  "/uploads/sets",
-  express.static(path.join(__dirname, "uploads", "sets"), {
-    setHeaders: (res, path) => {
-      if (path.endsWith(".mp3")) {
-        res.set({
-          "Accept-Ranges": "bytes",
-          "Content-Type": "audio/mpeg",
-          "Cache-Control": "public, max-age=0",
-        });
-      }
-    },
-  })
-);
-
-app.use(
-  "/uploads/sessions",
-  express.static(path.join(__dirname, "uploads", "sessions"), {
-    setHeaders: (res, path) => {
-      if (path.endsWith(".mp3")) {
-        res.set({
-          "Accept-Ranges": "bytes",
-          "Content-Type": "audio/mpeg",
-          "Cache-Control": "public, max-age=0",
-        });
-      }
-    },
-  })
-);
-
-// Add byte-range request handler
-app.get("*/uploads/**/*.mp3", (req, res, next) => {
-  if (req.headers.range) {
-    const filePath = path.join(__dirname, req.path);
     const stat = fs.statSync(filePath);
-    const range = req.headers.range;
-    const parts = range.replace(/bytes=/, "").split("-");
-    const start = parseInt(parts[0], 10);
-    const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
-    const chunksize = end - start + 1;
+    const fileSize = stat.size;
 
-    res.writeHead(206, {
-      "Content-Range": `bytes ${start}-${end}/${stat.size}`,
-      "Accept-Ranges": "bytes",
-      "Content-Length": chunksize,
+    // Set essential headers for audio streaming
+    res.set({
       "Content-Type": "audio/mpeg",
+      "Content-Length": fileSize,
+      "Accept-Ranges": "bytes",
+      "Cache-Control": "no-cache",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "Range",
     });
 
-    fs.createReadStream(filePath, { start, end }).pipe(res);
-  } else {
-    next();
-  }
-});
+    // Handle range requests
+    const range = req.headers.range;
+    if (range) {
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunksize = end - start + 1;
+
+      const partialHeaders = {
+        "Content-Type": "audio/mpeg",
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "no-cache",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Range",
+      };
+
+      res.writeHead(206, "Partial Content", {
+        ...partialHeaders,
+        "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+        "Content-Length": chunksize,
+      });
+
+      const stream = fs.createReadStream(filePath, { start, end });
+      stream.pipe(res);
+    } else {
+      fs.createReadStream(filePath).pipe(res);
+    }
+  };
+};
+
+// Apply the audio middleware to each upload directory
+app.use("/uploads/tunes", serveAudio("uploads/tunes"));
+app.use("/uploads/sets", serveAudio("uploads/sets"));
+app.use("/uploads/sessions", serveAudio("uploads/sessions"));
+
+// Serve static files (non-audio)
+app.use("/", express.static(path.join(__dirname, "./build")));
 
 // Google Passport Continued
 const GOOGLE_CLIENT_ID: string = process.env.GOOGLE_CLIENT_ID!;
@@ -337,92 +307,45 @@ passport.deserializeUser(
 );
 
 /*  Middleware for files specifically recordings  */
-const storageTune = multer.diskStorage({
-  destination: function (req: CustomRequest, file, cb) {
-    const tuneId = req.tuneId;
-    const dir = path.join("uploads", "tunes", tuneId);
 
-    // Ensure directory exists or create it
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-
-    cb(null, dir); // Set directory as the destination
-  },
-  filename: function (req: CustomRequest, file, cb) {
-    // Find the next sequential number for the file
-    const tuneId = req.tuneId;
-    console.log("Tune ID in storageTune filename:", tuneId); // Log the tuneId
-    const dir = path.join("uploads", "tunes", tuneId);
-    const files = fs.readdirSync(dir);
-    const nextIndex = files.length + 1; // Increment based on current files in the directory
-    const ext = ".mp3"; // Directly set the extension to .mp3
-    cb(null, `${nextIndex}${ext}`); // Name files sequentially
-  },
+// Initialize Minio Client
+const minioClient = new Client({
+  endPoint: "localhost",
+  port: 9001,
+  useSSL: true,
+  accessKey: process.env.MINIO_ACCESS,
+  secretKey: process.env.MINIO_SECRET,
 });
 
-const storageSet = multer.diskStorage({
-  destination: function (req: CustomRequest, file, cb) {
-    const setId = req.setId;
-    const dir = path.join("uploads", "sets", setId);
+// Create bucket if it doesn't exist
+const initializeMinio = async () => {
+  const bucketName = "audio-files";
+  const exists = await minioClient.bucketExists(bucketName);
+  if (!exists) {
+    await minioClient.makeBucket(bucketName);
+  }
+};
 
-    // Ensure directory exists or create it
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
+initializeMinio().catch(console.error);
 
-    cb(null, dir); // Set directory as the destination
-  },
-  filename: function (req: CustomRequest, file, cb) {
-    // Find the next sequential number for the file
-    const setId = req.setId;
-    const dir = path.join("uploads", "sets", setId);
-    const files = fs.readdirSync(dir);
-    const nextIndex = files.length + 1; // Increment based on current files in the directory
-    const ext = ".mp3"; // Directly set the extension to .mp3
-    cb(null, `${nextIndex}${ext}`); // Name files sequentially
-  },
-});
-
-const storageSession = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const sessionId =
-      req.body.sessionId || crypto.randomBytes(16).toString("hex");
-    const dir = path.join(__dirname, "uploads", "sessions", sessionId);
-
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-
-    // Attach sessionId to req.body for later use
-    req.body.sessionId = sessionId;
-
-    cb(null, dir);
-  },
-  filename: function (req, file, cb) {
-    const dir = path.join(__dirname, "uploads", "sessions", req.body.sessionId);
-    const files = fs.existsSync(dir) ? fs.readdirSync(dir) : [];
-    const nextIndex = files.length + 1;
-    const ext = path.extname(".mp3"); // Assuming recordings are .mp3
-    cb(null, `${nextIndex}${ext}`);
-  },
-});
+// Modify the file upload middleware to use Minio
+const uploadToMinio = async (file: Express.Multer.File, path: string) => {
+  const metaData = {
+    "Content-Type": "audio/mpeg",
+  };
+  await minioClient.putObject(
+    "audio-files",
+    path,
+    file.buffer,
+    file.size,
+    metaData
+  );
+};
 
 // Multer upload config (limit file size to 100MB, adjust if necessary)
-const uploadTune = multer({
-  storage: storageTune,
-  limits: { fileSize: 100 * 1024 * 1024 },
-}).array("recordings"); // Ensure the field name matches the form data
-
-const uploadSet = multer({
-  storage: storageSet,
-  limits: { fileSize: 100 * 1024 * 1024 },
-}).array("recordings"); // Ensure the field name matches the form data
-
-const uploadSession = multer({
-  storage: storageSession,
-  limits: { fileSize: 100 * 1024 * 1024 },
-}).array("recordings"); // Ensure the field name matches the form data
+const uploadMinio = multer({ storage: multer.memoryStorage() }).array(
+  "recordings"
+);
 
 /*  Starting and Killing Server  */
 app.listen(port, () => {
@@ -836,7 +759,7 @@ app.post("/api/tunes", createTuneId, requireAuth, (req: CustomRequest, res) => {
   console.log("Session data:", req.session);
   console.log("Incoming request to /api/tunes");
   let tuneId = req.tuneId;
-  uploadTune(req, res, async (err) => {
+  uploadMinio(req, res, async (err) => {
     if (err) {
       console.error(err);
       return res.status(500).send("Error uploading files");
@@ -858,11 +781,6 @@ app.post("/api/tunes", createTuneId, requireAuth, (req: CustomRequest, res) => {
       // Ensure req.files is treated as an array
       const files = req.files as Express.Multer.File[];
 
-      // Create an array of uploaded file paths (recording references)
-      const recordingRefs = files
-        ? files.map((file: Express.Multer.File) => file.path)
-        : [];
-
       const newTune = new Tune({
         tuneId,
         userId: currentUser.userId, // User ID from session
@@ -870,11 +788,24 @@ app.post("/api/tunes", createTuneId, requireAuth, (req: CustomRequest, res) => {
         tuneType,
         tuneKey,
         author,
-        recordingRef: recordingRefs, // Store the file paths
+        recordingRef: [], // Reset or initialize as empty before pushing new paths
         links,
         comments,
         dateAdded: new Date(),
       });
+
+      for (const file of files) {
+        const fileName = `${req.tuneId}/${Date.now()}-${file.originalname}`;
+        const metaData = { "Content-Type": "audio/mpeg" };
+        await minioClient.putObject(
+          "audio-files",
+          `tunes/${fileName}`,
+          file.buffer,
+          file.size,
+          metaData
+        );
+        newTune.recordingRef.push(`tunes/${fileName}`);
+      }
 
       await newTune.save();
 
@@ -904,7 +835,7 @@ app.put("/api/tunes/:id", requireAuth, async (req: CustomRequest, res) => {
   console.log("[PUT /api/tunes/:id] Updating tune:", req.params.id);
   const user = req.user as IUser;
   req.tuneId = req.params.id; // Set the tuneId on the request object
-  uploadTune(req, res, async (err) => {
+  uploadMinio(req, res, async (err) => {
     const { id } = req.params;
     let { fileCommands } = req.body; // Expect an array of commands for the existing recordings
     fileCommands = JSON.parse(fileCommands) || []; // Ensure fileCommands is an array
@@ -920,12 +851,6 @@ app.put("/api/tunes/:id", requireAuth, async (req: CustomRequest, res) => {
         return res.status(403).send("Not authorized to update this tune!");
       }
 
-      const recordingsDir = path.join(
-        __dirname,
-        "uploads",
-        "tunes",
-        tune.tuneId
-      );
       const existingRecordings = tune.recordingRef || [];
       console.log("Existing recordings: ", existingRecordings);
 
@@ -940,50 +865,31 @@ app.put("/api/tunes/:id", requireAuth, async (req: CustomRequest, res) => {
           return; // Skip if the index is out of bounds
         }
         const existingFile = existingRecordings[index];
-        const filePath = path.join(__dirname, existingFile);
-        console.log(`Existing file path: ${filePath}`);
-        console.log(`File exists: ${fs.existsSync(filePath)}`);
 
-        if (command === "delete" && fs.existsSync(filePath)) {
+        if (command === "delete") {
           // Delete the file
-          console.log(`Deleting file: ${filePath}`);
-          fs.unlinkSync(filePath);
+          console.log(`Deleting file: ${existingFile}`);
         } else if (command === "keep") {
           // Keep the file (renamed later)
           updatedRecordings.push(existingFile);
         }
       });
 
-      // Rename existing files to follow sequential numbering (1.mp3, 2.mp3, etc.)
-      updatedRecordings = updatedRecordings.map((file, idx) => {
-        console.log(`Updating file at index ${idx}`);
-        const newFileName = `${idx + 1}.mp3`;
-        const oldFilePath = path.join(__dirname, file);
-        const newFilePath = path.join(recordingsDir, newFileName);
-
-        if (file !== newFileName && fs.existsSync(oldFilePath)) {
-          fs.renameSync(oldFilePath, newFilePath); // Rename the file
-        }
-
-        return newFileName;
-      });
-
       // Append new recordings and give them sequential names
-      newFiles.forEach((file, idx) => {
-        if (file && file.path) {
-          const newFileName = `${updatedRecordings.length + idx + 1}.mp3`;
-          const newFilePath = path.join(recordingsDir, newFileName);
-
-          // Move the uploaded file to the correct directory with the correct name
-          fs.renameSync(file.path, newFilePath);
-          updatedRecordings.push(newFileName);
-        }
-      });
+      for (const file of newFiles) {
+        const fileName = `${id}/${Date.now()}-${file.originalname}`;
+        const metaData = { "Content-Type": "audio/mpeg" };
+        await minioClient.putObject(
+          "audio-files",
+          `tunes/${fileName}`,
+          file.buffer,
+          file.size,
+          metaData
+        );
+        updatedRecordings.push(`tunes/${fileName}`);
+      }
 
       // Update the tune with the new list of recordings
-      updatedRecordings = updatedRecordings.map((file) =>
-        path.join("/uploads/tunes", tune.tuneId, file)
-      );
       tune.recordingRef = updatedRecordings;
 
       // Update other fields
@@ -1025,7 +931,7 @@ app.post("/api/sets", createSetId, requireAuth, (req: CustomRequest, res) => {
   console.log("SetId:", req.setId);
   console.log("Incoming request to /api/sets");
   let setId = req.setId;
-  uploadSet(req, res, async (err) => {
+  uploadMinio(req, res, async (err) => {
     console.log("Set Id:", setId);
     if (err) {
       console.error(err);
@@ -1066,21 +972,29 @@ app.post("/api/sets", createSetId, requireAuth, (req: CustomRequest, res) => {
       // Ensure req.files is treated as an array
       const files = req.files as Express.Multer.File[];
 
-      // Create an array of uploaded file paths (recording references)
-      const recordingRefs = files
-        ? files.map((file: Express.Multer.File) => file.path)
-        : [];
-
       const newSet = new Set({
         setId,
         userId: req.session.userId, // User ID from session
         setName,
         tuneIds: uploadTunes,
-        recordingRef: recordingRefs, // Store the file paths
+        recordingRef: [], // Reset or initialize as empty before pushing new paths
         links,
         comments,
         dateAdded: new Date(),
       });
+
+      for (const file of files) {
+        const fileName = `${req.setId}/${Date.now()}-${file.originalname}`;
+        const metaData = { "Content-Type": "audio/mpeg" };
+        await minioClient.putObject(
+          "audio-files",
+          `sets/${fileName}`,
+          file.buffer,
+          file.size,
+          metaData
+        );
+        newSet.recordingRef.push(`sets/${fileName}`);
+      }
 
       await newSet.save();
 
@@ -1110,7 +1024,7 @@ app.put("/api/sets/:id", requireAuth, async (req: CustomRequest, res) => {
   console.log("[PUT /api/sets/:id] Updating set:", req.params.id);
   const user = req.user as IUser;
   req.setId = req.params.id; // Set the setId on the request object
-  uploadSet(req, res, async (err) => {
+  uploadMinio(req, res, async (err) => {
     const { id } = req.params;
     let { fileCommands } = req.body; // Expect an array of commands for the existing recordings
     fileCommands = JSON.parse(fileCommands) || []; // Ensure fileCommands is an array
@@ -1126,7 +1040,6 @@ app.put("/api/sets/:id", requireAuth, async (req: CustomRequest, res) => {
         return res.status(403).send("Not authorized to update this set!");
       }
 
-      const recordingsDir = path.join(__dirname, "uploads", "sets", set.setId);
       const existingRecordings = set.recordingRef || [];
       console.log("Existing recordings: ", existingRecordings);
 
@@ -1141,50 +1054,29 @@ app.put("/api/sets/:id", requireAuth, async (req: CustomRequest, res) => {
           return; // Skip if the index is out of bounds
         }
         const existingFile = existingRecordings[index];
-        const filePath = path.join(__dirname, existingFile);
-        console.log(`Existing file path: ${filePath}`);
-        console.log(`File exists: ${fs.existsSync(filePath)}`);
 
-        if (command === "delete" && fs.existsSync(filePath)) {
+        if (command === "delete") {
           // Delete the file
-          console.log(`Deleting file: ${filePath}`);
-          fs.unlinkSync(filePath);
+          console.log(`Deleting file: ${existingFile}`);
         } else if (command === "keep") {
           // Keep the file (renamed later)
           updatedRecordings.push(existingFile);
         }
       });
 
-      // Rename existing files to follow sequential numbering (1.mp3, 2.mp3, etc.)
-      updatedRecordings = updatedRecordings.map((file, idx) => {
-        console.log(`Updating file at index ${idx}`);
-        const newFileName = `${idx + 1}.mp3`;
-        const oldFilePath = path.join(__dirname, file);
-        const newFilePath = path.join(recordingsDir, newFileName);
-
-        if (file !== newFileName && fs.existsSync(oldFilePath)) {
-          fs.renameSync(oldFilePath, newFilePath); // Rename the file
-        }
-
-        return newFileName;
-      });
-
       // Append new recordings and give them sequential names
-      newFiles.forEach((file, idx) => {
-        if (file && file.path) {
-          const newFileName = `${updatedRecordings.length + idx + 1}.mp3`;
-          const newFilePath = path.join(recordingsDir, newFileName);
-
-          // Move the uploaded file to the correct directory with the correct name
-          fs.renameSync(file.path, newFilePath);
-          updatedRecordings.push(newFileName);
-        }
-      });
+      for (const file of newFiles) {
+        const fileName = `${id}/${Date.now()}-${file.originalname}`;
+        await minioClient.putObject(
+          "audio-files",
+          `sets/${fileName}`,
+          file.buffer,
+          file.size
+        );
+        updatedRecordings.push(`sets/${fileName}`);
+      }
 
       // Update the tune with the new list of recordings
-      updatedRecordings = updatedRecordings.map((file) =>
-        path.join("/uploads/tunes", set.setId, file)
-      );
       set.recordingRef = updatedRecordings;
 
       // Update other fields
@@ -1209,7 +1101,7 @@ app.put("/api/sets/:id", requireAuth, async (req: CustomRequest, res) => {
   });
 });
 
-app.post("/api/sessions", requireAuth, uploadSession, async (req, res) => {
+app.post("/api/sessions", requireAuth, uploadMinio, async (req, res) => {
   console.log("[POST /api/sessions] Creating new session");
   console.log("SessionId:", req.body.sessionId);
   const user = req.user as IUser;
@@ -1228,7 +1120,6 @@ app.post("/api/sessions", requireAuth, uploadSession, async (req, res) => {
 
     // Ensure req.files is treated as an array
     const files = req.files as Express.Multer.File[];
-    const recordingRefs = files ? files.map((file) => file.path) : [];
 
     const newSession = new Session({
       sessionId,
@@ -1236,9 +1127,22 @@ app.post("/api/sessions", requireAuth, uploadSession, async (req, res) => {
       sessionName,
       tuneIds: JSON.parse(tuneIds || "[]"), // Assuming tuneIds is a JSON stringified array
       setIds: JSON.parse(setIds || "[]"), // Assuming setIds is a JSON stringified array
-      recordingRef: recordingRefs,
+      recordingRef: [], // Reset or initialize as empty before pushing new paths
       comments,
     });
+
+    for (const file of files) {
+      const fileName = `${req.body.sessionId}/${Date.now()}-${
+        file.originalname
+      }`;
+      await minioClient.putObject(
+        "audio-files",
+        `sessions/${fileName}`,
+        file.buffer,
+        file.size
+      );
+      newSession.recordingRef.push(`sessions/${fileName}`);
+    }
 
     await newSession.save();
     return res
@@ -1266,19 +1170,6 @@ app.delete("/api/sessions/:id", requireAuth, async (req, res) => {
       !req.session.isAdmin
     ) {
       return res.status(403).send("Not authorized to delete this session!");
-    }
-
-    const recordingsDir = path.join(
-      __dirname,
-      "uploads",
-      "sessions",
-      session.sessionId
-    );
-    if (fs.existsSync(recordingsDir)) {
-      fs.readdirSync(recordingsDir).forEach((file) => {
-        fs.unlinkSync(path.join(recordingsDir, file));
-      });
-      fs.rmdirSync(recordingsDir);
     }
 
     await Session.deleteOne({ sessionId: id });
@@ -1558,42 +1449,100 @@ app.get("/logout/", (req, res) => {
   });
 });
 
-// Replace the existing static file serving with this new middleware
-app.get("/uploads/:type/:id/*.mp3", (req, res) => {
-  const filePath = path.join(__dirname, req.path);
-  const stat = fs.statSync(filePath);
-  const fileSize = stat.size;
-  const range = req.headers.range;
+// Add this single, unified audio handler
+app.get("/uploads/:type/:id/*", (req, res) => {
+  try {
+    const { type, id } = req.params;
+    const filename = req.params[0];
+    const filePath = path.join(__dirname, "uploads", type, id, filename);
 
-  if (range) {
-    const parts = range.replace(/bytes=/, "").split("-");
-    const start = parseInt(parts[0], 10);
-    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-    const chunksize = end - start + 1;
-    const file = fs.createReadStream(filePath, { start, end });
+    if (!fs.existsSync(filePath)) {
+      console.error(`File not found: ${filePath}`);
+      return res.status(404).send("File not found");
+    }
 
-    const head = {
-      "Content-Range": `bytes ${start}-${end}/${fileSize}`,
-      "Accept-Ranges": "bytes",
-      "Content-Length": chunksize,
+    const stat = fs.statSync(filePath);
+    const fileSize = stat.size;
+
+    if (fileSize === 0) {
+      console.error(`Empty file: ${filePath}`);
+      return res.status(404).send("File not ready");
+    }
+
+    const headers = {
       "Content-Type": "audio/mpeg",
-      "Cache-Control": "no-cache",
-    };
-
-    res.writeHead(206, head);
-    file.pipe(res);
-  } else {
-    const head = {
       "Content-Length": fileSize,
-      "Content-Type": "audio/mpeg",
       "Accept-Ranges": "bytes",
-      "Cache-Control": "no-cache",
+      "Cache-Control": "public, max-age=31536000",
+      "X-Content-Type-Options": "nosniff",
+      "Cross-Origin-Resource-Policy": "cross-origin",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, HEAD",
+      "Access-Control-Allow-Headers": "Range",
     };
 
-    res.writeHead(200, head);
-    fs.createReadStream(filePath).pipe(res);
+    const range = req.headers.range;
+    if (range) {
+      const parts = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunksize = end - start + 1;
+
+      res.writeHead(206, "Partial Content", {
+        ...headers,
+        "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+        "Content-Length": chunksize,
+      });
+
+      const stream = fs.createReadStream(filePath, { start, end });
+      stream.on("error", (error) => {
+        console.error("Stream error:", error);
+        if (!res.headersSent) {
+          res.status(500).send("Error streaming file");
+        }
+      });
+
+      stream.pipe(res);
+    } else {
+      res.writeHead(200, headers);
+      const stream = fs.createReadStream(filePath);
+      stream.on("error", (error) => {
+        console.error("Stream error:", error);
+        if (!res.headersSent) {
+          res.status(500).send("Error streaming file");
+        }
+      });
+      stream.pipe(res);
+    }
+  } catch (error) {
+    console.error("Audio streaming error:", error);
+    if (!res.headersSent) {
+      res.status(500).send("Error streaming audio");
+    }
   }
 });
+
+// Add a new endpoint to get presigned URLs
+app.get("/audio/:type/:id/:file", async (req, res) => {
+  try {
+    const { type, id, file } = req.params;
+    const objectName = `${type}/${id}/${file}`;
+
+    // Generate presigned URL valid for 24 hours
+    const url = await minioClient.presignedGetObject(
+      "audio-files",
+      objectName,
+      24 * 60 * 60
+    );
+    res.json({ url });
+  } catch (error) {
+    console.error("Error generating presigned URL:", error);
+    res.status(500).send("Error accessing audio file");
+  }
+});
+
+// Keep only these static file servings:
+app.use("/", express.static(path.join(__dirname, "./build")));
 
 // Handle other routes by serving the React app
 app.get("*", (req, res) => {

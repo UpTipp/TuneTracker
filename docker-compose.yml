@@ -11,9 +11,4 @@ services:
       - GOOGLE_CLIENT_SECRET=your_google_client_secret
       - NODE_ENV=production
       - CI=true
-    volumes:
-      - tune_uploads:/usr/src/app/uploads
     restart: unless-stopped
-
-volumes:
-  tune_uploads:
