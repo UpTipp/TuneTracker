@@ -9,7 +9,6 @@ const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [unsupported, setUnsupported] = useState(false);
-  const [audioURL, setAudioURL] = useState<string>("");
   const mediaRecorderRef = useRef(null);
   const timeIntervalRef = useRef(null);
 
@@ -49,7 +48,6 @@ const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
 
         const url = URL.createObjectURL(blob);
         onRecordingComplete(file, url);
-        handleStopRecording(chunks);
       };
 
       // Request data in smaller chunks
@@ -75,11 +73,6 @@ const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
       setRecordingTime(0);
     }
   };
-
-  function handleStopRecording(chunks: BlobPart[]) {
-    const audioBlob = new Blob(chunks, { type: "audio/wav" });
-    setAudioURL(URL.createObjectURL(audioBlob));
-  }
 
   return (
     <div>

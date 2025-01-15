@@ -74,7 +74,10 @@ const NewTune = ({ dataFetch }) => {
 
   const removeFile = (index: number) => {
     setFiles(files.filter((_, i) => i !== index));
+    const urlToRemove = fileURLs[index];
     setFileURLs(fileURLs.filter((_, i) => i !== index));
+    // Revoke the URL to free up memory
+    URL.revokeObjectURL(urlToRemove);
   };
 
   async function onAddTune() {
