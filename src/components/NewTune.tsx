@@ -11,6 +11,7 @@ import {
 import FileUploadSection from "./FileUploadSection";
 import LinksSection from "./LinksSection";
 import AudioRecorder from "./AudioRecorder";
+import AudioPlayer from "./AudioPlayer";
 
 const NewTune = ({ dataFetch }) => {
   const [openModal, setOpenModal] = useState(false);
@@ -26,9 +27,9 @@ const NewTune = ({ dataFetch }) => {
   const [comments, setComments] = useState("");
   const [fileURLs, setFileURLs] = useState<string[]>([]);
 
-  const handleRecordingComplete = (file: File, url: string) => {
-    setFiles((prevFiles) => [...prevFiles, file]);
-    setFileURLs((prevURLs) => [...prevURLs, url]);
+  const handleRecordingComplete = (url: string, file: File) => {
+    setFiles((prev) => [...prev, file]);
+    setFileURLs((prev) => [...prev, url]);
   };
 
   function onCloseModal() {
@@ -243,8 +244,24 @@ const NewTune = ({ dataFetch }) => {
               files={files}
               fileURLs={fileURLs}
               onFileAdd={addFile}
-              onFileRemove={removeFile}
             />
+
+            {/* Files */}
+            <ul className="mt-2">
+              {fileURLs.map((url, i) => (
+                <li key={i} className="flex items-center">
+                  <AudioPlayer url={url} className="w-full" />
+                  <Button
+                    onClick={() => removeFile(i)}
+                    className="ml-2"
+                    size="xs"
+                    color="red"
+                  >
+                    Remove
+                  </Button>
+                </li>
+              ))}
+            </ul>
 
             {/* Comments */}
             <div>

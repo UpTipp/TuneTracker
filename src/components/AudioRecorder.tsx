@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button, Label } from "flowbite-react";
 
 interface AudioRecorderProps {
-  onRecordingComplete: (file: File, url: string) => void;
+  onRecordingComplete: (url: string, file: File) => void;
 }
 
 const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
@@ -48,7 +48,7 @@ const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
         });
 
         const url = URL.createObjectURL(blob);
-        onRecordingComplete(file, url);
+        onRecordingComplete(url, file);
         handleStopRecording(chunks);
       };
 
