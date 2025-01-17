@@ -12,5 +12,8 @@ services:
       - NODE_ENV=production
       - MINIO_ACCESS_KEY=your_minio_access_key
       - MINIO_SECRET_KEY=your_minio_secret_key
+      - MINIO_ENDPOINT=your_minio_endpoint
+      - MINIO_PORT=your_minio_port
+      - MAIN_DOMAIN=your_domain_name
       - CI=true
     restart: unless-stopped

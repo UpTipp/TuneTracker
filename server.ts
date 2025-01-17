@@ -311,7 +311,7 @@ passport.deserializeUser(
 // Initialize Minio Client
 const minioClient = new Client({
   endPoint: process.env.MINIO_ENDPOINT,
-  port: 9001,
+  port: parseInt(process.env.MINIO_PORT!, 10),
   accessKey: process.env.MINIO_ACCESS,
   secretKey: process.env.MINIO_SECRET,
 });
@@ -344,11 +344,6 @@ const uploadToMinio = async (file: Express.Multer.File, path: string) => {
   const fileUrl = `${process.env.MAIN_DOMAIN}/audio/${path}`;
   return fileUrl;
 };
-
-// Multer upload config (limit file size to 100MB, adjust if necessary)
-const uploadMinio = multer({ storage: multer.memoryStorage() }).array(
-  "recordings"
-);
 
 /*  Starting and Killing Server  */
 app.listen(port, () => {
@@ -766,71 +761,66 @@ app.post(
     console.log("Session data:", req.session);
     console.log("Incoming request to /api/tunes");
     let tuneId = req.tuneId;
-    uploadMinio(req, res, async (err) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).send("Error uploading files");
+
+    const { tuneName, tuneType, author, tuneKey, links, comments } = req.body;
+
+    if (!req.session || !req.session.userId) {
+      return res.status(403).send("Not Logged In!");
+    }
+
+    if (!tuneName || !tuneType) {
+      return res
+        .status(400)
+        .send("Missing required fields: tuneName or tuneType");
+    }
+
+    try {
+      // Ensure req.files is treated as an array
+      const files = req.files as Express.Multer.File[];
+
+      const newTune = new Tune({
+        tuneId,
+        userId: currentUser.userId, // User ID from session
+        tuneName,
+        tuneType,
+        tuneKey,
+        author,
+        recordingRef: [], // Reset or initialize as empty before pushing new paths
+        links,
+        comments,
+        dateAdded: new Date(),
+      });
+
+      for (const file of files) {
+        console.log("Uploading file:", file.originalname);
+        const objectName = `tunes/${tuneId}/${Date.now()}-${file.originalname}`;
+        console.log("Object name:", objectName);
+        const minioLink = await uploadToMinio(file, objectName);
+        console.log("Minio link:", minioLink);
+        newTune.recordingRef.push(minioLink);
       }
 
-      const { tuneName, tuneType, author, tuneKey, links, comments } = req.body;
+      await newTune.save();
 
-      if (!req.session || !req.session.userId) {
-        return res.status(403).send("Not Logged In!");
-      }
+      // Add the tune to the user's tuneStates
+      let user = await User.findOne({ userId: currentUser.userId });
+      user.tuneStates.push({
+        tuneId,
+        state: "want-to-learn",
+        lastPractice: new Date(),
+        dateAdded: new Date(),
+        comments: "",
+        hidden: false,
+      });
+      await user.save();
 
-      if (!tuneName || !tuneType) {
-        return res
-          .status(400)
-          .send("Missing required fields: tuneName or tuneType");
-      }
-
-      try {
-        // Ensure req.files is treated as an array
-        const files = req.files as Express.Multer.File[];
-
-        const newTune = new Tune({
-          tuneId,
-          userId: currentUser.userId, // User ID from session
-          tuneName,
-          tuneType,
-          tuneKey,
-          author,
-          recordingRef: [], // Reset or initialize as empty before pushing new paths
-          links,
-          comments,
-          dateAdded: new Date(),
-        });
-
-        for (const file of files) {
-          const objectName = `tunes/${tuneId}/${Date.now()}-${
-            file.originalname
-          }`;
-          const minioLink = await uploadToMinio(file, objectName);
-          newTune.recordingRef.push(minioLink);
-        }
-
-        await newTune.save();
-
-        // Add the tune to the user's tuneStates
-        let user = await User.findOne({ userId: currentUser.userId });
-        user.tuneStates.push({
-          tuneId,
-          state: "want-to-learn",
-          lastPractice: new Date(),
-          dateAdded: new Date(),
-          comments: "",
-          hidden: false,
-        });
-        await user.save();
-
-        return res
-          .status(201)
-          .json({ message: "Tune created successfully", tune: newTune });
-      } catch (error) {
-        console.error(error);
-        return res.status(500).send("Error creating tune");
-      }
-    });
+      return res
+        .status(201)
+        .json({ message: "Tune created successfully", tune: newTune });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).send("Error creating tune");
+    }
   }
 );
 
@@ -838,101 +828,98 @@ app.put("/api/tunes/:id", requireAuth, async (req: CustomRequest, res) => {
   console.log("[PUT /api/tunes/:id] Updating tune:", req.params.id);
   const user = req.user as IUser;
   req.tuneId = req.params.id; // Set the tuneId on the request object
-  uploadMinio(req, res, async (err) => {
-    const { id } = req.params;
-    let { fileCommands } = req.body; // Expect an array of commands for the existing recordings
-    fileCommands = JSON.parse(fileCommands) || []; // Ensure fileCommands is an array
 
-    try {
-      const tune = await Tune.findOne({ tuneId: id });
-      console.log("Tune: ", tune);
-      if (!tune) {
-        return res.status(404).send("No Tune Found!");
-      }
+  const { id } = req.params;
+  let { fileCommands } = req.body; // Expect an array of commands for the existing recordings
+  fileCommands = JSON.parse(fileCommands) || []; // Ensure fileCommands is an array
 
-      if (!user.isAdmin && tune.userId !== user.userId) {
-        return res.status(403).send("Not authorized to update this tune!");
-      }
-
-      const existingRecordings = tune.recordingRef || [];
-      console.log("Existing recordings: ", existingRecordings);
-
-      // Ensure req.files is treated as an array
-      const newFiles = req.files as Express.Multer.File[];
-      let updatedRecordings: string[] = [];
-
-      // Process the commands for existing files
-      fileCommands.forEach((command: string, index: number) => {
-        console.log(`Processing command: ${command} for index: ${index}`);
-        if (index >= existingRecordings.length) {
-          return; // Skip if the index is out of bounds
-        }
-        const existingFile = existingRecordings[index];
-
-        if (command === "delete") {
-          // Delete the file
-          console.log(`Deleting file: ${existingFile}`);
-        } else if (command === "keep") {
-          // Keep the file (renamed later)
-          updatedRecordings.push(existingFile);
-        }
-      });
-
-      // Append new recordings and give them sequential names
-      for (const file of newFiles) {
-        const objectName = `tunes/${id}/${Date.now()}-${file.originalname}`;
-        const minioLink = await uploadToMinio(file, objectName);
-        updatedRecordings.push(minioLink);
-      }
-
-      // Update the tune with the new list of recordings
-      tune.recordingRef = updatedRecordings;
-
-      // Update other fields
-      if (req.body.tuneName && req.body.tuneName !== "") {
-        tune.tuneName = req.body.tuneName;
-      }
-
-      if (req.body.tuneType && req.body.tuneType !== "") {
-        tune.tuneType = req.body.tuneType;
-      }
-
-      if (req.body.tuneKey) {
-        tune.tuneKey = req.body.tuneKey;
-      }
-
-      if (req.body.links) {
-        tune.links = req.body.links;
-      }
-
-      if (req.body.author) {
-        tune.author = req.body.author;
-      }
-
-      if (req.body.comments) {
-        tune.comments = req.body.comments;
-      }
-
-      await tune.save();
-      return res.status(200).json(tune);
-    } catch (error) {
-      console.error(error);
-      return res.status(500).send("Error updating tune");
+  try {
+    const tune = await Tune.findOne({ tuneId: id });
+    console.log("Tune: ", tune);
+    if (!tune) {
+      return res.status(404).send("No Tune Found!");
     }
-  });
+
+    if (!user.isAdmin && tune.userId !== user.userId) {
+      return res.status(403).send("Not authorized to update this tune!");
+    }
+
+    const existingRecordings = tune.recordingRef || [];
+    console.log("Existing recordings: ", existingRecordings);
+
+    // Ensure req.files is treated as an array
+    const newFiles = req.files as Express.Multer.File[];
+    let updatedRecordings: string[] = [];
+
+    // Process the commands for existing files
+    fileCommands.forEach((command: string, index: number) => {
+      console.log(`Processing command: ${command} for index: ${index}`);
+      if (index >= existingRecordings.length) {
+        return; // Skip if the index is out of bounds
+      }
+      const existingFile = existingRecordings[index];
+
+      if (command === "delete") {
+        // Delete the file
+        console.log(`Deleting file: ${existingFile}`);
+      } else if (command === "keep") {
+        // Keep the file (renamed later)
+        updatedRecordings.push(existingFile);
+      }
+    });
+
+    // Append new recordings and give them sequential names
+    for (const file of newFiles) {
+      const objectName = `tunes/${id}/${Date.now()}-${file.originalname}`;
+      const minioLink = await uploadToMinio(file, objectName);
+      updatedRecordings.push(minioLink);
+    }
+
+    // Update the tune with the new list of recordings
+    tune.recordingRef = updatedRecordings;
+
+    // Update other fields
+    if (req.body.tuneName && req.body.tuneName !== "") {
+      tune.tuneName = req.body.tuneName;
+    }
+
+    if (req.body.tuneType && req.body.tuneType !== "") {
+      tune.tuneType = req.body.tuneType;
+    }
+
+    if (req.body.tuneKey) {
+      tune.tuneKey = req.body.tuneKey;
+    }
+
+    if (req.body.links) {
+      tune.links = req.body.links;
+    }
+
+    if (req.body.author) {
+      tune.author = req.body.author;
+    }
+
+    if (req.body.comments) {
+      tune.comments = req.body.comments;
+    }
+
+    await tune.save();
+    return res.status(200).json(tune);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send("Error updating tune");
+  }
 });
 
-app.post("/api/sets", createSetId, requireAuth, (req: CustomRequest, res) => {
-  console.log("[POST /api/sets] Creating new set");
-  console.log("SetId:", req.setId);
-  console.log("Incoming request to /api/sets");
-  let setId = req.setId;
-  uploadMinio(req, res, async (err) => {
-    console.log("Set Id:", setId);
-    if (err) {
-      console.error(err);
-      return res.status(500).send("Error uploading files");
-    }
+app.post(
+  "/api/sets",
+  createSetId,
+  requireAuth,
+  async (req: CustomRequest, res) => {
+    console.log("[POST /api/sets] Creating new set");
+    console.log("SetId:", req.setId);
+    console.log("Incoming request to /api/sets");
+    let setId = req.setId;
 
     const { setName, author, tunes, links, comments } = req.body;
 
@@ -1006,86 +993,85 @@ app.post("/api/sets", createSetId, requireAuth, (req: CustomRequest, res) => {
       console.error(error);
       return res.status(500).send("Error creating set");
     }
-  });
-});
+  }
+);
 
 app.put("/api/sets/:id", requireAuth, async (req: CustomRequest, res) => {
   console.log("[PUT /api/sets/:id] Updating set:", req.params.id);
   const user = req.user as IUser;
   req.setId = req.params.id; // Set the setId on the request object
-  uploadMinio(req, res, async (err) => {
-    const { id } = req.params;
-    let { fileCommands } = req.body; // Expect an array of commands for the existing recordings
-    fileCommands = JSON.parse(fileCommands) || []; // Ensure fileCommands is an array
 
-    try {
-      const set = await Set.findOne({ setId: id });
-      console.log("Set: ", set);
-      if (!set) {
-        return res.status(404).send("No Tune Found!");
-      }
+  const { id } = req.params;
+  let { fileCommands } = req.body; // Expect an array of commands for the existing recordings
+  fileCommands = JSON.parse(fileCommands) || []; // Ensure fileCommands is an array
 
-      if (!user.isAdmin && set.userId !== user.userId) {
-        return res.status(403).send("Not authorized to update this set!");
-      }
-
-      const existingRecordings = set.recordingRef || [];
-      console.log("Existing recordings: ", existingRecordings);
-
-      // Ensure req.files is treated as an array
-      const newFiles = req.files as Express.Multer.File[];
-      let updatedRecordings: string[] = [];
-
-      // Process the commands for existing files
-      fileCommands.forEach((command: string, index: number) => {
-        console.log(`Processing command: ${command} for index: ${index}`);
-        if (index >= existingRecordings.length) {
-          return; // Skip if the index is out of bounds
-        }
-        const existingFile = existingRecordings[index];
-
-        if (command === "delete") {
-          // Delete the file
-          console.log(`Deleting file: ${existingFile}`);
-        } else if (command === "keep") {
-          // Keep the file (renamed later)
-          updatedRecordings.push(existingFile);
-        }
-      });
-
-      // Append new recordings and give them sequential names
-      for (const file of newFiles) {
-        const objectName = `sets/${id}/${Date.now()}-${file.originalname}`;
-        const minioLink = await uploadToMinio(file, objectName);
-        updatedRecordings.push(minioLink);
-      }
-
-      // Update the tune with the new list of recordings
-      set.recordingRef = updatedRecordings;
-
-      // Update other fields
-      if (req.body.setName && req.body.setName !== "") {
-        set.setName = req.body.setName;
-      }
-
-      if (req.body.links) {
-        set.links = req.body.links;
-      }
-
-      if (req.body.comments) {
-        set.comments = req.body.comments;
-      }
-
-      await set.save();
-      return res.status(200).json(set);
-    } catch (error) {
-      console.error(error);
-      return res.status(500).send("Error updating set");
+  try {
+    const set = await Set.findOne({ setId: id });
+    console.log("Set: ", set);
+    if (!set) {
+      return res.status(404).send("No Tune Found!");
     }
-  });
+
+    if (!user.isAdmin && set.userId !== user.userId) {
+      return res.status(403).send("Not authorized to update this set!");
+    }
+
+    const existingRecordings = set.recordingRef || [];
+    console.log("Existing recordings: ", existingRecordings);
+
+    // Ensure req.files is treated as an array
+    const newFiles = req.files as Express.Multer.File[];
+    let updatedRecordings: string[] = [];
+
+    // Process the commands for existing files
+    fileCommands.forEach((command: string, index: number) => {
+      console.log(`Processing command: ${command} for index: ${index}`);
+      if (index >= existingRecordings.length) {
+        return; // Skip if the index is out of bounds
+      }
+      const existingFile = existingRecordings[index];
+
+      if (command === "delete") {
+        // Delete the file
+        console.log(`Deleting file: ${existingFile}`);
+      } else if (command === "keep") {
+        // Keep the file (renamed later)
+        updatedRecordings.push(existingFile);
+      }
+    });
+
+    // Append new recordings and give them sequential names
+    for (const file of newFiles) {
+      const objectName = `sets/${id}/${Date.now()}-${file.originalname}`;
+      const minioLink = await uploadToMinio(file, objectName);
+      updatedRecordings.push(minioLink);
+    }
+
+    // Update the tune with the new list of recordings
+    set.recordingRef = updatedRecordings;
+
+    // Update other fields
+    if (req.body.setName && req.body.setName !== "") {
+      set.setName = req.body.setName;
+    }
+
+    if (req.body.links) {
+      set.links = req.body.links;
+    }
+
+    if (req.body.comments) {
+      set.comments = req.body.comments;
+    }
+
+    await set.save();
+    return res.status(200).json(set);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send("Error updating set");
+  }
 });
 
-app.post("/api/sessions", requireAuth, uploadMinio, async (req, res) => {
+app.post("/api/sessions", requireAuth, async (req, res) => {
   console.log("[POST /api/sessions] Creating new session");
   console.log("SessionId:", req.body.sessionId);
   const user = req.user as IUser;
