@@ -88,22 +88,32 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
+const isDebugMode = process.env.DEBUG_MODE === "true";
+
+function debugLog(...messages: any[]) {
+  if (isDebugMode) {
+    console.log(...messages);
+  }
+}
+
 // Add this debugging middleware before any route handlers
 app.use((req, res, next) => {
-  console.log("\n=== Session Debug Info ===");
-  console.log("Cookies:", req.headers.cookie);
-  console.log("Session ID:", req.sessionID);
-  console.log("Session:", {
-    ...req.session,
-    cookie: {
-      ...req.session?.cookie,
-      expires: req.session?.cookie?.expires,
-      maxAge: req.session?.cookie?.maxAge,
-    },
-  });
-  console.log("Is Authenticated:", req.isAuthenticated());
-  console.log("User:", req.user);
-  console.log("=== End Session Debug ===\n");
+  if (isDebugMode) {
+    console.log("\n=== Session Debug Info ===");
+    console.log("Cookies:", req.headers.cookie);
+    console.log("Session ID:", req.sessionID);
+    console.log("Session:", {
+      ...req.session,
+      cookie: {
+        ...req.session?.cookie,
+        expires: req.session?.cookie?.expires,
+        maxAge: req.session?.cookie?.maxAge,
+      },
+    });
+    console.log("Is Authenticated:", req.isAuthenticated());
+    console.log("User:", req.user);
+    console.log("=== End Session Debug ===\n");
+  }
   next();
 });
 
@@ -751,6 +761,9 @@ app.post(
   createTuneId,
   requireAuth,
   async (req: CustomRequest, res) => {
+    debugLog("[POST /api/tunes] Entered route handler");
+    debugLog("Body:", req.body);
+
     console.log("[POST /api/tunes] Creating new tune");
     console.log("TuneId:", req.tuneId);
     const currentUser = req.user as IUser;
@@ -814,11 +827,12 @@ app.post(
       });
       await user.save();
 
+      debugLog("New tune saved successfully.");
       return res
         .status(201)
         .json({ message: "Tune created successfully", tune: newTune });
     } catch (error) {
-      console.error(error);
+      console.error("Error creating tune:", error);
       return res.status(500).send("Error creating tune");
     }
   }
