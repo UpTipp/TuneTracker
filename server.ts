@@ -89,6 +89,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 const isDebugMode = process.env.DEBUG_MODE === "true";
+console.log("Debug mode:", isDebugMode);
 
 function debugLog(...messages: any[]) {
   if (isDebugMode) {
@@ -322,8 +323,9 @@ passport.deserializeUser(
 const minioClient = new Client({
   endPoint: process.env.MINIO_ENDPOINT,
   port: parseInt(process.env.MINIO_PORT!, 10),
-  accessKey: process.env.MINIO_ACCESS,
-  secretKey: process.env.MINIO_SECRET,
+  accessKey: process.env.MINIO_ACCESS_KEY,
+  secretKey: process.env.MINIO_SECRET_KEY,
+  useSSL: false,
 });
 
 // Create bucket if it doesn't exist
@@ -845,7 +847,12 @@ app.put("/api/tunes/:id", requireAuth, async (req: CustomRequest, res) => {
 
   const { id } = req.params;
   let { fileCommands } = req.body; // Expect an array of commands for the existing recordings
-  fileCommands = JSON.parse(fileCommands) || []; // Ensure fileCommands is an array
+
+  try {
+    fileCommands = JSON.parse(fileCommands) || []; // Ensure fileCommands is an array
+  } catch (error) {
+    return res.status(400).send("Invalid JSON in fileCommands");
+  }
 
   try {
     const tune = await Tune.findOne({ tuneId: id });
@@ -1017,13 +1024,18 @@ app.put("/api/sets/:id", requireAuth, async (req: CustomRequest, res) => {
 
   const { id } = req.params;
   let { fileCommands } = req.body; // Expect an array of commands for the existing recordings
-  fileCommands = JSON.parse(fileCommands) || []; // Ensure fileCommands is an array
+
+  try {
+    fileCommands = JSON.parse(fileCommands) || []; // Ensure fileCommands is an array
+  } catch (error) {
+    return res.status(400).send("Invalid JSON in fileCommands");
+  }
 
   try {
     const set = await Set.findOne({ setId: id });
     console.log("Set: ", set);
     if (!set) {
-      return res.status(404).send("No Tune Found!");
+      return res.status(404).send("No Set Found!");
     }
 
     if (!user.isAdmin && set.userId !== user.userId) {
