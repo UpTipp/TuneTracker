@@ -12,7 +12,7 @@ import Session from "./models/Session";
 
 /*  Important Modules!  */
 import dotenv from "dotenv";
-import express, { Request } from "express";
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import path from "path";
 import mongoose from "mongoose";
@@ -120,10 +120,10 @@ app.use((req, res, next) => {
 
 // Add this middleware before your routes
 app.use((req, res, next) => {
-  if (req.method === "POST" || req.method === "PUT") {
-    console.log("Request cookies:", req.cookies);
-    console.log("Session ID:", req.sessionID);
-    console.log("Session data:", req.session);
+  if (isDebugMode && (req.method === "POST" || req.method === "PUT")) {
+    console.log(
+      `[DEBUG] Request cookies: ${req.headers.cookie}, SID: ${req.sessionID}`
+    );
   }
   next();
 });
@@ -143,11 +143,11 @@ app.use(
 
 // Add debug middleware for cookie inspection
 app.use((req, res, next) => {
-  console.log("\n=== Cookie Debug Info ===");
-  console.log("Raw Cookies Header:", req.headers.cookie);
-  console.log("Parsed Cookies:", req.cookies);
-  console.log("Session Cookie:", req.sessionID);
-  console.log("=== End Cookie Debug ===\n");
+  if (isDebugMode) {
+    console.log(
+      `[DEBUG] Cookie header: ${req.headers.cookie}, SID: ${req.sessionID}`
+    );
+  }
   next();
 });
 
@@ -359,6 +359,16 @@ const uploadToMinio = async (file: Express.Multer.File, path: string) => {
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+function checkMultipart(req: Request, res: Response, next: NextFunction) {
+  const contentType = req.headers["content-type"] || "";
+  if (!contentType.includes("multipart/form-data")) {
+    console.log("Request is not multipart/form-data");
+    // You can return an error or just log
+    // return res.status(400).send("Expected multipart/form-data");
+  }
+  next();
+}
+
 /*  Starting and Killing Server  */
 app.listen(port, () => {
   console.log(`Server is running at http://localhost:${port}`);
@@ -516,16 +526,13 @@ async function createSetId(req, res, next) {
 app.use((req, res, next) => {
   const start = Date.now();
 
-  // Log request details
-  console.log(`\n=== ${new Date().toISOString()} ===`);
-  console.log(`${req.method} ${req.url}`);
-  console.log("Headers:", JSON.stringify(req.headers, null, 2));
-  console.log("Query:", JSON.stringify(req.query, null, 2));
-  console.log("Body:", JSON.stringify(req.body, null, 2));
-  console.log(
-    "User:",
-    req.user ? `ID: ${(req.user as IUser).userId}` : "Not authenticated"
-  );
+  if (isDebugMode) {
+    console.log(
+      `[REQUEST LOG] ${new Date().toISOString()} ${req.method} ${req.url} SID:${
+        req.sessionID
+      }`
+    );
+  }
 
   // Log response details
   res.on("finish", () => {
@@ -762,7 +769,8 @@ app.post("/api/users/:id/:type", requireAuth, async (req, res) => {
 
 app.post(
   "/api/tunes",
-  upload.array("files"),
+  checkMultipart,
+  upload.any(),
   createTuneId,
   requireAuth,
   async (req: CustomRequest, res) => {
@@ -845,7 +853,8 @@ app.post(
 
 app.put(
   "/api/tunes/:id",
-  upload.array("files"),
+  checkMultipart,
+  upload.any(),
   requireAuth,
   async (req: CustomRequest, res) => {
     console.log("[PUT /api/tunes/:id] Updating tune:", req.params.id);
