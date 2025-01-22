@@ -7,15 +7,20 @@ interface AudioPlayerProps {
 
 const AudioPlayer = ({ url, className = "" }: AudioPlayerProps) => {
   return (
-    <div className={className}>
-      <ReactPlayer
-        url={url}
-        controls
-        playing={false}
-        width="100%"
-        height="50px"
-      />
-    </div>
+    <ReactPlayer
+      className={className}
+      url={url}
+      controls
+      playsinline
+      config={{
+        file: {
+          attributes: {
+            preload: "metadata",
+            controlsList: "nodownload",
+          },
+        },
+      }}
+    />
   );
 };
 

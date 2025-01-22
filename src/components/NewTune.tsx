@@ -252,11 +252,14 @@ const NewTune = ({ dataFetch }) => {
             {/* Files */}
             <ul className="mt-2">
               {fileURLs.map((url, i) => (
-                <li key={i} className="flex items-center">
+                <li
+                  key={i}
+                  className="flex flex-col sm:flex-row sm:items-center"
+                >
                   <AudioPlayer url={url} className="w-full" />
                   <Button
                     onClick={() => removeFile(i)}
-                    className="ml-2"
+                    className="mt-2 sm:mt-0 sm:ml-2"
                     size="xs"
                     color="red"
                   >

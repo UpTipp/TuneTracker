@@ -24,6 +24,7 @@ import crypto from "crypto";
 import multer from "multer";
 import fs from "fs";
 import { Client } from "minio";
+import ffmpeg from "fluent-ffmpeg";
 
 dotenv.config(); // Initialize dotenv
 
@@ -1648,6 +1649,7 @@ app.get("/audio/:type/:id/:file", async (req, res) => {
       "Accept-Ranges": "bytes",
       "Cache-Control": "no-cache",
       "Access-Control-Allow-Origin": "*",
+      "Content-Disposition": `inline; filename="${file}"`,
     });
 
     dataStream.pipe(res);
@@ -1656,6 +1658,33 @@ app.get("/audio/:type/:id/:file", async (req, res) => {
     if (!res.headersSent) {
       res.status(500).send("Error streaming audio");
     }
+  }
+});
+
+// Add a new endpoint to extract audio from video files
+app.post("/api/extract-audio", upload.single("file"), async (req, res) => {
+  const file = req.file;
+  if (!file) {
+    return res.status(400).send("No file provided");
+  }
+  try {
+    const inputPath = file.path || file.originalname;
+    ffmpeg()
+      .input(file.buffer)
+      .noVideo()
+      .audioCodec("libmp3lame")
+      .format("mp3")
+      .on("error", (err) => {
+        console.error("[ffmpeg] Conversion error:", err);
+        return res.status(500).send("Audio extraction failed");
+      })
+      .on("end", () => {
+        // Optionally store or return the extracted file
+      })
+      .pipe(res, { end: true });
+  } catch (error) {
+    console.error("Error extracting audio:", error);
+    return res.status(500).send("Error extracting audio");
   }
 });
 

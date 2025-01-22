@@ -5,7 +5,6 @@ import {
   IoIosArrowDroprightCircle,
 } from "react-icons/io";
 import ItemHeader from "./ItemHeader";
-import ReactPlayer from "react-player";
 import Cookie from "js-cookie";
 import UpdatePractice from "./UpdatePractice";
 import UpdateSession from "./UpdateSession";
