@@ -18,7 +18,7 @@ services:
       - MAIN_DOMAIN=your_domain_name
       - CI=true
     restart: unless-stopped
-    network:
+    networks:
       - bridge
 
 networks:
