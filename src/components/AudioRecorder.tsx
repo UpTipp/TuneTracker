@@ -7,101 +7,74 @@ interface AudioRecorderProps {
 
 const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
   const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [unsupported, setUnsupported] = useState(false);
   const mediaRecorderRef = useRef(null);
-  const timeIntervalRef = useRef(null);
 
   useEffect(() => {
     if (!window.MediaRecorder) {
-      setUnsupported(true);
+      alert("MediaRecorder not supported in this browser.");
     }
   }, []);
 
-  const startRecording = async () => {
-    if (!window.MediaRecorder) {
-      alert("MediaRecorder not supported in this browser.");
-      return;
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: "audio/webm;codecs=opus", // Better cross-browser support
-        audioBitsPerSecond: 128000,
-      });
-      mediaRecorderRef.current = mediaRecorder;
-      const chunks = [];
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunks.push(e.data);
-      };
-
-      mediaRecorder.onstop = async () => {
-        // Create blob with proper chunks
-        const blob = new Blob(chunks, { type: "audio/mpeg" });
-
-        // Convert to MP3 if needed (you might want to add a conversion step here)
-        const file = new File([blob], `recording-${Date.now()}.mp3`, {
-          type: "audio/mpeg",
-          lastModified: Date.now(),
+  const handleRecord = async () => {
+    if (!isRecording) {
+      // Start new recording
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
         });
+        const mediaRecorder = new MediaRecorder(stream, {
+          mimeType: "audio/webm;codecs=opus", // Better cross-browser support
+          audioBitsPerSecond: 128000,
+        });
+        mediaRecorderRef.current = mediaRecorder;
+        const chunks = [];
 
-        const url = URL.createObjectURL(blob);
-        onRecordingComplete(file, url);
-      };
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunks.push(e.data);
+        };
 
-      // Request data in smaller chunks
-      mediaRecorder.start(1000); // capture in 1-second chunks
-      setIsRecording(true);
+        mediaRecorder.onstop = async () => {
+          // Create blob with proper chunks
+          const blob = new Blob(chunks, { type: "audio/mpeg" });
 
-      timeIntervalRef.current = setInterval(() => {
-        setRecordingTime((prev) => prev + 1);
-      }, 1000);
-    } catch (err) {
-      console.error("Error accessing microphone:", err);
-    }
-  };
+          // Convert to MP3 if needed (you might want to add a conversion step here)
+          const file = new File([blob], `recording-${Date.now()}.mp3`, {
+            type: "audio/mpeg",
+            lastModified: Date.now(),
+          });
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream
-        .getTracks()
-        .forEach((track) => track.stop());
-      setIsRecording(false);
-      clearInterval(timeIntervalRef.current);
-      setRecordingTime(0);
+          const url = URL.createObjectURL(blob);
+          onRecordingComplete(file, url);
+        };
+
+        // Request data in smaller chunks
+        mediaRecorder.start(1000); // capture in 1-second chunks
+        setIsRecording(true);
+      } catch (err) {
+        console.error("Error accessing microphone:", err);
+      }
+    } else {
+      // Stop recording
+      if (mediaRecorderRef.current) {
+        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current.stream
+          .getTracks()
+          .forEach((track) => track.stop());
+        setIsRecording(false);
+      }
     }
   };
 
   return (
     <div>
-      {unsupported && (
-        <p className="text-red-600 text-sm">
-          Recording not supported in this browser.
-        </p>
-      )}
-      {!unsupported && (
-        <>
-          <div className="mb-2 block">
-            <Label value="Record Audio" />
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              color={isRecording ? "red" : "blue"}
-              onClick={isRecording ? stopRecording : startRecording}
-            >
-              {isRecording ? "Stop Recording" : "Start Recording"}
-            </Button>
-            {isRecording && (
-              <span className="text-red-600">
-                Recording: {Math.floor(recordingTime / 60)}:
-                {String(recordingTime % 60).padStart(2, "0")}
-              </span>
-            )}
-          </div>
-        </>
-      )}
+      <div className="mb-2 block">
+        <Label value="Record Audio" />
+      </div>
+      <div className="flex items-center gap-2">
+        <Button color={isRecording ? "red" : "blue"} onClick={handleRecord}>
+          {isRecording ? "Stop Recording" : "Start Recording"}
+        </Button>
+      </div>
     </div>
   );
 };

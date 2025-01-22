@@ -818,11 +818,10 @@ app.post(
       });
 
       for (const file of files) {
-        console.log("Uploading file:", file.originalname);
-        const objectName = `tunes/${tuneId}/${Date.now()}-${file.originalname}`;
-        console.log("Object name:", objectName);
+        // Use next numeric index rather than original filename
+        const nextIndex = newTune.recordingRef.length + 1;
+        const objectName = `tunes/${tuneId}/${nextIndex}.mp3`;
         const minioLink = await uploadToMinio(file, objectName);
-        console.log("Minio link:", minioLink);
         newTune.recordingRef.push(minioLink);
       }
 
@@ -910,7 +909,9 @@ app.put(
 
       // Append new recordings and give them sequential names
       for (const file of newFiles) {
-        const objectName = `tunes/${id}/${Date.now()}-${file.originalname}`;
+        // Rename to existing count + 1
+        const nextIndex = updatedRecordings.length + 1;
+        const objectName = `tunes/${id}/${nextIndex}.mp3`;
         const minioLink = await uploadToMinio(file, objectName);
         updatedRecordings.push(minioLink);
       }
@@ -954,6 +955,8 @@ app.put(
 
 app.post(
   "/api/sets",
+  checkMultipart,
+  upload.any(),
   createSetId,
   requireAuth,
   async (req: CustomRequest, res) => {
@@ -1008,7 +1011,8 @@ app.post(
       });
 
       for (const file of files) {
-        const objectName = `sets/${setId}/${Date.now()}-${file.originalname}`;
+        const nextIndex = newSet.recordingRef.length + 1;
+        const objectName = `sets/${setId}/${nextIndex}.mp3`;
         const minioLink = await uploadToMinio(file, objectName);
         newSet.recordingRef.push(minioLink);
       }
@@ -1037,133 +1041,232 @@ app.post(
   }
 );
 
-app.put("/api/sets/:id", requireAuth, async (req: CustomRequest, res) => {
-  console.log("[PUT /api/sets/:id] Updating set:", req.params.id);
-  const user = req.user as IUser;
-  req.setId = req.params.id; // Set the setId on the request object
+app.put(
+  "/api/sets/:id",
+  checkMultipart,
+  upload.any(),
+  requireAuth,
+  async (req: CustomRequest, res) => {
+    console.log("[PUT /api/sets/:id] Updating set:", req.params.id);
+    const user = req.user as IUser;
+    req.setId = req.params.id; // Set the setId on the request object
 
-  const { id } = req.params;
-  let { fileCommands } = req.body; // Expect an array of commands for the existing recordings
+    const { id } = req.params;
+    let { fileCommands } = req.body; // Expect an array of commands for the existing recordings
 
-  try {
-    fileCommands = JSON.parse(fileCommands) || []; // Ensure fileCommands is an array
-  } catch (error) {
-    return res.status(400).send("Invalid JSON in fileCommands");
-  }
-
-  try {
-    const set = await Set.findOne({ setId: id });
-    console.log("Set: ", set);
-    if (!set) {
-      return res.status(404).send("No Set Found!");
+    try {
+      fileCommands = JSON.parse(fileCommands) || []; // Ensure fileCommands is an array
+    } catch (error) {
+      return res.status(400).send("Invalid JSON in fileCommands");
     }
 
-    if (!user.isAdmin && set.userId !== user.userId) {
-      return res.status(403).send("Not authorized to update this set!");
-    }
-
-    const existingRecordings = set.recordingRef || [];
-    console.log("Existing recordings: ", existingRecordings);
-
-    // Ensure req.files is treated as an array
-    const newFiles = req.files as Express.Multer.File[];
-    let updatedRecordings: string[] = [];
-
-    // Process the commands for existing files
-    fileCommands.forEach((command: string, index: number) => {
-      console.log(`Processing command: ${command} for index: ${index}`);
-      if (index >= existingRecordings.length) {
-        return; // Skip if the index is out of bounds
+    try {
+      const set = await Set.findOne({ setId: id });
+      console.log("Set: ", set);
+      if (!set) {
+        return res.status(404).send("No Set Found!");
       }
-      const existingFile = existingRecordings[index];
 
-      if (command === "delete") {
-        // Delete the file
-        console.log(`Deleting file: ${existingFile}`);
-      } else if (command === "keep") {
-        // Keep the file (renamed later)
-        updatedRecordings.push(existingFile);
+      if (!user.isAdmin && set.userId !== user.userId) {
+        return res.status(403).send("Not authorized to update this set!");
       }
-    });
 
-    // Append new recordings and give them sequential names
-    for (const file of newFiles) {
-      const objectName = `sets/${id}/${Date.now()}-${file.originalname}`;
-      const minioLink = await uploadToMinio(file, objectName);
-      updatedRecordings.push(minioLink);
+      const existingRecordings = set.recordingRef || [];
+      console.log("Existing recordings: ", existingRecordings);
+
+      // Ensure req.files is treated as an array
+      const newFiles = req.files as Express.Multer.File[];
+      let updatedRecordings: string[] = [];
+
+      // Process the commands for existing files
+      fileCommands.forEach((command: string, index: number) => {
+        console.log(`Processing command: ${command} for index: ${index}`);
+        if (index >= existingRecordings.length) {
+          return; // Skip if the index is out of bounds
+        }
+        const existingFile = existingRecordings[index];
+
+        if (command === "delete") {
+          // Delete the file
+          console.log(`Deleting file: ${existingFile}`);
+        } else if (command === "keep") {
+          // Keep the file (renamed later)
+          updatedRecordings.push(existingFile);
+        }
+      });
+
+      // Append new recordings and give them sequential names
+      for (const file of newFiles) {
+        const nextIndex = updatedRecordings.length + 1;
+        const objectName = `sets/${id}/${nextIndex}.mp3`;
+        const minioLink = await uploadToMinio(file, objectName);
+        updatedRecordings.push(minioLink);
+      }
+
+      // Update the tune with the new list of recordings
+      set.recordingRef = updatedRecordings;
+
+      // Update other fields
+      if (req.body.setName && req.body.setName !== "") {
+        set.setName = req.body.setName;
+      }
+
+      if (req.body.links) {
+        set.links = req.body.links;
+      }
+
+      if (req.body.comments) {
+        set.comments = req.body.comments;
+      }
+
+      await set.save();
+      return res.status(200).json(set);
+    } catch (error) {
+      console.error(error);
+      return res.status(500).send("Error updating set");
     }
-
-    // Update the tune with the new list of recordings
-    set.recordingRef = updatedRecordings;
-
-    // Update other fields
-    if (req.body.setName && req.body.setName !== "") {
-      set.setName = req.body.setName;
-    }
-
-    if (req.body.links) {
-      set.links = req.body.links;
-    }
-
-    if (req.body.comments) {
-      set.comments = req.body.comments;
-    }
-
-    await set.save();
-    return res.status(200).json(set);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).send("Error updating set");
   }
-});
+);
 
-app.post("/api/sessions", requireAuth, async (req, res) => {
-  console.log("[POST /api/sessions] Creating new session");
-  console.log("SessionId:", req.body.sessionId);
-  const user = req.user as IUser;
-  if (!user) {
-    return res.status(401).send("Not authenticated");
-  }
-
-  const { sessionName, tuneIds, setIds, comments } = req.body;
-
-  if (!sessionName) {
-    return res.status(400).send("Missing required field: sessionName");
-  }
-
-  try {
-    const sessionId = req.body.sessionId;
-
-    // Ensure req.files is treated as an array
-    const files = req.files as Express.Multer.File[];
-
-    const newSession = new Session({
-      sessionId,
-      userId: user.userId,
-      sessionName,
-      tuneIds: JSON.parse(tuneIds || "[]"), // Assuming tuneIds is a JSON stringified array
-      setIds: JSON.parse(setIds || "[]"), // Assuming setIds is a JSON stringified array
-      recordingRef: [], // Reset or initialize as empty before pushing new paths
-      comments,
-    });
-
-    for (const file of files) {
-      const objectName = `sessions/${sessionId}/${Date.now()}-${
-        file.originalname
-      }`;
-      const minioLink = await uploadToMinio(file, objectName);
-      newSession.recordingRef.push(minioLink);
+app.post(
+  "/api/sessions",
+  checkMultipart,
+  upload.any(),
+  requireAuth,
+  async (req, res) => {
+    console.log("[POST /api/sessions] Creating new session");
+    console.log("SessionId:", req.body.sessionId);
+    const user = req.user as IUser;
+    if (!user) {
+      return res.status(401).send("Not authenticated");
     }
 
-    await newSession.save();
-    return res
-      .status(201)
-      .json({ message: "Session created successfully", session: newSession });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).send("Error creating session");
+    const { sessionName, tuneIds, setIds, comments } = req.body;
+
+    if (!sessionName) {
+      return res.status(400).send("Missing required field: sessionName");
+    }
+
+    try {
+      const sessionId = req.body.sessionId;
+
+      // Ensure req.files is treated as an array
+      const files = req.files as Express.Multer.File[];
+
+      const newSession = new Session({
+        sessionId,
+        userId: user.userId,
+        sessionName,
+        tuneIds: JSON.parse(tuneIds || "[]"), // Assuming tuneIds is a JSON stringified array
+        setIds: JSON.parse(setIds || "[]"), // Assuming setIds is a JSON stringified array
+        recordingRef: [], // Reset or initialize as empty before pushing new paths
+        comments,
+      });
+
+      for (const file of files) {
+        const nextIndex = newSession.recordingRef.length + 1;
+        const objectName = `sessions/${sessionId}/${nextIndex}.mp3`;
+        const minioLink = await uploadToMinio(file, objectName);
+        newSession.recordingRef.push(minioLink);
+      }
+
+      await newSession.save();
+      return res
+        .status(201)
+        .json({ message: "Session created successfully", session: newSession });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).send("Error creating session");
+    }
   }
-});
+);
+
+app.put(
+  "/api/sessions/:id",
+  checkMultipart,
+  upload.any(),
+  requireAuth,
+  async (req, res) => {
+    console.log("[PUT /api/sessions/:id] Updating session:", req.params.id);
+    const user = req.user as IUser;
+    req.sessionID = req.params.id; // Set the setId on the request object
+
+    const { id } = req.params;
+    let { fileCommands } = req.body; // Expect an array of commands for the existing recordings
+
+    try {
+      fileCommands = JSON.parse(fileCommands) || []; // Ensure fileCommands is an array
+    } catch (error) {
+      return res.status(400).send("Invalid JSON in fileCommands");
+    }
+
+    try {
+      const session = await Session.findOne({ sessionId: id });
+      console.log("Session: ", session);
+      if (!session) {
+        return res.status(404).send("No Session Found!");
+      }
+
+      if (!user.isAdmin && session.userId !== user.userId) {
+        return res.status(403).send("Not authorized to update this session!");
+      }
+
+      const existingRecordings = session.recordingRef || [];
+      console.log("Existing recordings: ", existingRecordings);
+
+      // Ensure req.files is treated as an array
+      const newFiles = req.files as Express.Multer.File[];
+      let updatedRecordings: string[] = [];
+
+      // Process the commands for existing files
+      fileCommands.forEach((command: string, index: number) => {
+        console.log(`Processing command: ${command} for index: ${index}`);
+        if (index >= existingRecordings.length) {
+          return; // Skip if the index is out of bounds
+        }
+        const existingFile = existingRecordings[index];
+
+        if (command === "delete") {
+          // Delete the file
+          console.log(`Deleting file: ${existingFile}`);
+        } else if (command === "keep") {
+          // Keep the file (renamed later)
+          updatedRecordings.push(existingFile);
+        }
+      });
+
+      // Append new recordings and give them sequential names
+      for (const file of newFiles) {
+        const nextIndex = updatedRecordings.length + 1;
+        const objectName = `sessions/${id}/${nextIndex}.mp3`;
+        const minioLink = await uploadToMinio(file, objectName);
+        updatedRecordings.push(minioLink);
+      }
+
+      // Update the session with the new list of recordings
+      session.recordingRef = updatedRecordings;
+
+      // Update other fields
+      if (req.body.sessionName && req.body.sessionName !== "") {
+        session.sessionName = req.body.sessionName;
+      }
+
+      if (req.body.links) {
+        session.links = req.body.links;
+      }
+
+      if (req.body.comments) {
+        session.comments = req.body.comments;
+      }
+
+      await session.save();
+      return res.status(200).json(session);
+    } catch (error) {
+      console.error(error);
+      return res.status(500).send("Error updating session");
+    }
+  }
+);
 
 app.delete("/api/sessions/:id", requireAuth, async (req, res) => {
   console.log("[DELETE /api/sessions/:id] Deleting session:", req.params.id);
@@ -1538,17 +1641,21 @@ app.get("/audio/:type/:id/:file", async (req, res) => {
   try {
     const { type, id, file } = req.params;
     const objectName = `${type}/${id}/${file}`;
+    const dataStream = await minioClient.getObject("audio-files", objectName);
 
-    // Generate presigned URL valid for 24 hours
-    const url = await minioClient.presignedGetObject(
-      "audio-files",
-      objectName,
-      24 * 60 * 60
-    );
-    res.json({ url });
+    res.set({
+      "Content-Type": "audio/mpeg",
+      "Accept-Ranges": "bytes",
+      "Cache-Control": "no-cache",
+      "Access-Control-Allow-Origin": "*",
+    });
+
+    dataStream.pipe(res);
   } catch (error) {
-    console.error("Error generating presigned URL:", error);
-    res.status(500).send("Error accessing audio file");
+    console.error("Error streaming audio from MinIO:", error);
+    if (!res.headersSent) {
+      res.status(500).send("Error streaming audio");
+    }
   }
 });
 
