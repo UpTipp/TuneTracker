@@ -74,13 +74,10 @@ const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
           {isRecording ? "Stop Recording" : "Start Recording"}
         </Button>
         {isRecording && (
-          <>
-            <span className="text-red-600">
-              Recording: {Math.floor(recordingTime / 60)}:
-              {String(recordingTime % 60).padStart(2, "0")}
-            </span>
-            <div>{elapsedTime} seconds</div>
-          </>
+          <span className="text-red-600">
+            Recording: {Math.floor(recordingTime / 60)}:
+            {String(recordingTime % 60).padStart(2, "0")}
+          </span>
         )}
       </div>
     </div>
