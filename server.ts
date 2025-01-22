@@ -1643,6 +1643,7 @@ app.get("/audio/:type/:id/:file", async (req, res) => {
     const { type, id, file } = req.params;
     const objectName = `${type}/${id}/${file}`;
     const dataStream = await minioClient.getObject("audio-files", objectName);
+    const stat = await minioClient.statObject("audio-files", objectName);
 
     res.set({
       "Content-Type": "audio/mpeg",
@@ -1650,6 +1651,8 @@ app.get("/audio/:type/:id/:file", async (req, res) => {
       "Cache-Control": "no-cache",
       "Access-Control-Allow-Origin": "*",
       "Content-Disposition": `inline; filename="${file}"`,
+      "Content-Transfer-Encoding": "binary",
+      "Content-Length": stat.size,
     });
 
     dataStream.pipe(res);
