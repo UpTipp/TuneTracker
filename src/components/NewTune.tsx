@@ -1,17 +1,14 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import {
   Button,
   Textarea,
   Select,
-  FileInput,
   Label,
   Modal,
   TextInput,
 } from "flowbite-react";
-import FileUploadSection from "./FileUploadSection";
 import LinksSection from "./LinksSection";
-import AudioRecorder from "./AudioRecorder";
-import AudioPlayer from "./AudioPlayer";
+import MediaInputs from "./MediaInputs";
 
 const NewTune = ({ dataFetch }) => {
   const [openModal, setOpenModal] = useState(false);
@@ -26,11 +23,6 @@ const NewTune = ({ dataFetch }) => {
   const [files, setFiles] = useState<File[]>([]);
   const [comments, setComments] = useState("");
   const [fileURLs, setFileURLs] = useState<string[]>([]);
-
-  const handleRecordingComplete = (file: File, url: string) => {
-    setFiles((prev) => [...prev, file]);
-    setFileURLs((prev) => [...prev, url]);
-  };
 
   function onCloseModal() {
     setOpenModal(false);
@@ -54,30 +46,6 @@ const NewTune = ({ dataFetch }) => {
 
   const removeLink = (index: number) => {
     setLinks(links.filter((_, i) => i !== index));
-  };
-
-  const addFile = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files.length > 0) {
-      const newFiles = Array.from(event.target.files);
-      setFiles([...files, ...newFiles]);
-
-      newFiles.forEach((file) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onloadend = () => {
-          setFileURLs((prevURLs) => [...prevURLs, reader.result as string]);
-        };
-      });
-    }
-    event.target.value = ""; // Clear the input value to allow re-uploading the same file
-  };
-
-  const removeFile = (index: number) => {
-    setFiles(files.filter((_, i) => i !== index));
-    const urlToRemove = fileURLs[index];
-    setFileURLs(fileURLs.filter((_, i) => i !== index));
-    // Revoke the URL to free up memory
-    URL.revokeObjectURL(urlToRemove);
   };
 
   async function onAddTune() {
@@ -235,6 +203,7 @@ const NewTune = ({ dataFetch }) => {
               />
             </div>
 
+            {/* Links */}
             <LinksSection
               links={links}
               linkInput={linkInput}
@@ -242,32 +211,14 @@ const NewTune = ({ dataFetch }) => {
               onAddLink={addLink}
               onRemoveLink={removeLink}
             />
-            <AudioRecorder onRecordingComplete={handleRecordingComplete} />
-            <FileUploadSection
+
+            {/* Media Inputs */}
+            <MediaInputs
               files={files}
               fileURLs={fileURLs}
-              onFileAdd={addFile}
+              setFiles={setFiles}
+              setFileURLs={setFileURLs}
             />
-
-            {/* Files */}
-            <ul className="mt-2">
-              {fileURLs.map((url, i) => (
-                <li
-                  key={i}
-                  className="flex flex-col sm:flex-row sm:items-center"
-                >
-                  <AudioPlayer url={url} className="w-full" />
-                  <Button
-                    onClick={() => removeFile(i)}
-                    className="mt-2 sm:mt-0 sm:ml-2"
-                    size="xs"
-                    color="red"
-                  >
-                    Remove
-                  </Button>
-                </li>
-              ))}
-            </ul>
 
             {/* Comments */}
             <div>

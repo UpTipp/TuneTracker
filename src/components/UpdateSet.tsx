@@ -26,10 +26,8 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { MdDragIndicator } from "react-icons/md";
 import SearchDropdown from "./SearchDropdown";
-import FileUploadSection from "./FileUploadSection";
 import LinksSection from "./LinksSection";
-import AudioRecorder from "./AudioRecorder";
-import AudioPlayer from "./AudioPlayer";
+import MediaInputsUpload from "./MediaInputsUpload";
 
 const SortableItem = ({ tune, onRemove }) => {
   const { attributes, listeners, setNodeRef, transform, transition } =
@@ -196,36 +194,6 @@ const UpdateSet = ({
     }
   };
 
-  // File handling methods
-  const addFile = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files.length > 0) {
-      const newFiles = Array.from(event.target.files);
-      setFiles([...files, ...newFiles]);
-
-      newFiles.forEach((file) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onloadend = () => {
-          setFileURLs((prevURLs) => [...prevURLs, reader.result as string]);
-        };
-      });
-    }
-    event.target.value = "";
-  };
-
-  const removeFile = (index: number) => {
-    if (index < (set.recordingRef?.length || 0)) {
-      const newCommands = [...fileCommands];
-      newCommands[index] = "delete";
-      setFileCommands(newCommands);
-      setFileURLs(fileURLs.filter((_, i) => i !== index));
-    } else {
-      const newIndex = index - (set.recordingRef?.length || 0);
-      setFiles(files.filter((_, i) => i !== newIndex));
-      setFileURLs(fileURLs.filter((_, i) => i !== index));
-    }
-  };
-
   const addLink = () => {
     if (linkInput.trim() !== "") {
       setLinks([...links, linkInput.trim()]);
@@ -239,11 +207,6 @@ const UpdateSet = ({
 
   const isFormValid = () => {
     return setName.trim() !== "" && tunes.length >= 2;
-  };
-
-  const handleRecordingComplete = (file: File, url: string) => {
-    setFiles((prevFiles) => [...prevFiles, file]);
-    setFileURLs((prevURLs) => [...prevURLs, url]);
   };
 
   return (
@@ -280,29 +243,16 @@ const UpdateSet = ({
               onRemoveLink={removeLink}
             />
 
-            <AudioRecorder onRecordingComplete={handleRecordingComplete} />
-            <FileUploadSection
+            {/* Media Inputs */}
+            <MediaInputsUpload
               files={files}
               fileURLs={fileURLs}
-              onFileAdd={addFile}
+              fileCommands={fileCommands}
+              setFiles={setFiles}
+              setFileURLs={setFileURLs}
+              setFileCommands={setFileCommands}
+              recordingRefLen={set.recordingRef.length}
             />
-
-            {/* Files */}
-            <ul className="mt-2">
-              {fileURLs.map((url, i) => (
-                <li key={i} className="flex items-center">
-                  <AudioPlayer url={url} className="w-full" />
-                  <Button
-                    onClick={() => removeFile(i)}
-                    className="ml-2"
-                    size="xs"
-                    color="red"
-                  >
-                    Remove
-                  </Button>
-                </li>
-              ))}
-            </ul>
 
             <SearchDropdown
               label="Search Tunes"

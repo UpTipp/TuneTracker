@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useReactMediaRecorder } from "react-media-recorder";
 import { Button, Label } from "flowbite-react";
 
 interface AudioRecorderProps {
@@ -6,59 +6,24 @@ interface AudioRecorderProps {
 }
 
 const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [elapsedTime, setElapsedTime] = useState(0);
-  const mediaRecorderRef = useRef(null);
-  const timeIntervalRef = useRef(null);
-  let timerRef = useRef<NodeJS.Timeout | null>(null);
+  const {
+    status,
+    startRecording,
+    stopRecording,
+    pauseRecording,
+    mediaBlobUrl,
+  } = useReactMediaRecorder({ audio: true });
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      const chunks = [];
-
-      mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: "audio/mpeg" });
-        const file = new File([blob], `recording-${Date.now()}.mp3`, {
-          type: "audio/mpeg",
-        });
-        const url = URL.createObjectURL(blob);
-        onRecordingComplete(file, url);
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-      setElapsedTime(0);
-      timerRef.current = setInterval(() => {
-        setElapsedTime((prev) => prev + 1);
-      }, 1000);
-
-      timeIntervalRef.current = setInterval(() => {
-        setRecordingTime((prev) => prev + 1);
-      }, 1000);
-    } catch (err) {
-      console.error("Error accessing microphone:", err);
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream
-        .getTracks()
-        .forEach((track) => track.stop());
-      setIsRecording(false);
-      clearInterval(timeIntervalRef.current);
-      setRecordingTime(0);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    }
+  const handleStopRecording = async () => {
+    stopRecording();
+    // Wait a moment for the blob to finalize
+    setTimeout(async () => {
+      const response = await fetch(mediaBlobUrl || "");
+      const blob = await response.blob();
+      const file = new File([blob], "recording.mp3", { type: "audio/mp3" });
+      const url = URL.createObjectURL(file);
+      onRecordingComplete(file, url);
+    }, 500);
   };
 
   return (
@@ -66,18 +31,19 @@ const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
       <div className="mb-2 block">
         <Label value="Record Audio" />
       </div>
+      <p>Recording status: {status}</p>
       <div className="flex items-center gap-2">
-        <Button
-          color={isRecording ? "red" : "blue"}
-          onClick={isRecording ? stopRecording : startRecording}
-        >
-          {isRecording ? "Stop Recording" : "Start Recording"}
+        <Button color="blue" onClick={startRecording}>
+          Start
         </Button>
-        {isRecording && (
-          <span className="text-red-600">
-            Recording: {Math.floor(recordingTime / 60)}:
-            {String(recordingTime % 60).padStart(2, "0")}
-          </span>
+        <Button color="yellow" onClick={pauseRecording}>
+          Pause
+        </Button>
+        <Button color="red" onClick={handleStopRecording}>
+          Stop
+        </Button>
+        {mediaBlobUrl && (
+          <audio src={mediaBlobUrl} controls style={{ display: "inline" }} />
         )}
       </div>
     </div>

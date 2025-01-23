@@ -7,10 +7,8 @@ import {
   Modal,
   TextInput,
 } from "flowbite-react";
-import FileUploadSection from "./FileUploadSection";
+import MediaInputsUpload from "./MediaInputsUpload";
 import LinksSection from "./LinksSection";
-import AudioRecorder from "./AudioRecorder";
-import AudioPlayer from "./AudioPlayer";
 
 const UpdateTune = ({ type, itemId, tune, dataFetch }) => {
   // Modal Setup
@@ -79,53 +77,6 @@ const UpdateTune = ({ type, itemId, tune, dataFetch }) => {
 
   const removeLink = (index: number) => {
     setLinks(links.filter((_, i) => i !== index));
-  };
-
-  const addFile = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files.length > 0) {
-      const newFiles = Array.from(event.target.files);
-      setFiles([...files, ...newFiles]);
-      setFileCommands([
-        ...fileCommands,
-        ...Array(newFiles.length).fill("keep"),
-      ]);
-
-      newFiles.forEach((file) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onloadend = () => {
-          setFileURLs((prevURLs) => [...prevURLs, reader.result as string]);
-        };
-      });
-    }
-    event.target.value = ""; // Clear the input value to allow re-uploading the same file
-  };
-
-  const removeFile = (index: number) => {
-    if (index < tune.recordingRef.length) {
-      // Existing file, set command to "delete"
-      const newCommands = [...fileCommands];
-      newCommands[index] = "delete";
-      setFileCommands(newCommands);
-      setFileURLs(fileURLs.filter((_, i) => i !== index));
-    } else {
-      // New file, remove from files and fileURLs
-      const newIndex = index - tune.recordingRef.length;
-      setFiles(files.filter((_, i) => i !== newIndex));
-      setFileURLs(fileURLs.filter((_, i) => i !== index));
-      setFileCommands(fileCommands.filter((_, i) => i !== index));
-    }
-  };
-
-  const handleFileCommandChange = (index: number, command: string) => {
-    const newCommands = [...fileCommands];
-    newCommands[index] = command;
-    setFileCommands(newCommands);
-  };
-
-  const handleRecordingComplete = (file: File, url: string) => {
-    setFiles((prevFiles) => [...prevFiles, file]);
-    setFileURLs((prevURLs) => [...prevURLs, url]);
   };
 
   // Sending the Data
@@ -291,29 +242,16 @@ const UpdateTune = ({ type, itemId, tune, dataFetch }) => {
               onRemoveLink={removeLink}
             />
 
-            <AudioRecorder onRecordingComplete={handleRecordingComplete} />
-            <FileUploadSection
+            {/* Media Inputs */}
+            <MediaInputsUpload
               files={files}
               fileURLs={fileURLs}
-              onFileAdd={addFile}
+              fileCommands={fileCommands}
+              setFiles={setFiles}
+              setFileURLs={setFileURLs}
+              setFileCommands={setFileCommands}
+              recordingRefLen={tune.recordingRef.length}
             />
-
-            {/* Files */}
-            <ul className="mt-2">
-              {fileURLs.map((url, i) => (
-                <li key={i} className="flex items-center">
-                  <AudioPlayer url={url} className="w-full" />
-                  <Button
-                    onClick={() => removeFile(i)}
-                    className="ml-2"
-                    size="xs"
-                    color="red"
-                  >
-                    Remove
-                  </Button>
-                </li>
-              ))}
-            </ul>
 
             {/* Comments */}
             <div>

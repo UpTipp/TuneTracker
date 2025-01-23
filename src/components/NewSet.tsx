@@ -5,10 +5,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { MdDragIndicator } from "react-icons/md";
 import SearchDropdown from "./SearchDropdown";
 import DraggableList from "./DraggableList";
-import FileUploadSection from "./FileUploadSection";
 import LinksSection from "./LinksSection";
-import AudioRecorder from "./AudioRecorder";
-import AudioPlayer from "./AudioPlayer";
+import MediaInputs from "./MediaInputs";
 
 const SortableItem = ({ tune, onRemove }) => {
   const { attributes, listeners, setNodeRef, transform, transition } =
@@ -87,27 +85,6 @@ const NewSet = ({ dataFetch, userTunes }) => {
 
   const removeLink = (index: number) => {
     setLinks(links.filter((_, i) => i !== index));
-  };
-
-  const addFile = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files.length > 0) {
-      const newFiles = Array.from(event.target.files);
-      setFiles([...files, ...newFiles]);
-
-      newFiles.forEach((file) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onloadend = () => {
-          setFileURLs((prevURLs) => [...prevURLs, reader.result as string]);
-        };
-      });
-    }
-    event.target.value = ""; // Clear the input value to allow re-uploading the same file
-  };
-
-  const removeFile = (index: number) => {
-    setFiles(files.filter((_, i) => i !== index));
-    setFileURLs(fileURLs.filter((_, i) => i !== index));
   };
 
   const handleTuneSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -252,29 +229,13 @@ const NewSet = ({ dataFetch, userTunes }) => {
               onRemoveLink={removeLink}
             />
 
-            <AudioRecorder onRecordingComplete={handleRecordingComplete} />
-            <FileUploadSection
+            {/* Files */}
+            <MediaInputs
               files={files}
               fileURLs={fileURLs}
-              onFileAdd={addFile}
+              setFiles={setFiles}
+              setFileURLs={setFileURLs}
             />
-
-            {/* Files */}
-            <ul className="mt-2">
-              {fileURLs.map((url, i) => (
-                <li key={i} className="flex items-center">
-                  <AudioPlayer url={url} className="w-full" />
-                  <Button
-                    onClick={() => removeFile(i)}
-                    className="ml-2"
-                    size="xs"
-                    color="red"
-                  >
-                    Remove
-                  </Button>
-                </li>
-              ))}
-            </ul>
 
             <SearchDropdown
               label="Search Tunes"

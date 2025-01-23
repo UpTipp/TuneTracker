@@ -20,6 +20,7 @@ import DisplaySet from "../components/DisplaySet";
 import DisplaySession from "../components/DisplaySession";
 import { useUserData } from "../hooks/useUserData";
 import { HiPlus } from "react-icons/hi";
+import { IoIosClose } from "react-icons/io";
 
 // Add these types at the top of the file, after imports
 type TimeframeFilter = {
@@ -1377,12 +1378,20 @@ const User = () => {
           </Tabs.Item>
         </Tabs>
         {itemMemory.length > 1 && (
-          <Button
-            onClick={goBack}
-            className="fixed bottom-10 left-4 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-full shadow-lg z-50"
-          >
-            Back
-          </Button>
+          <div className="flex flex-row justify-right gap-0 fixed bottom-10 left-4 py-2 px-4 rounded-tr-full rounded-br-full shadow-lg z-50">
+            <Button
+              onClick={() => setItemMemory([])}
+              className="bg-gray-400 hover:bg-gray-500"
+            >
+              <IoIosClose />
+            </Button>
+            <Button
+              onClick={goBack}
+              className=" bg-green-500 hover:bg-green-600 text-white font-bold"
+            >
+              Back
+            </Button>
+          </div>
         )}
       </div>
     </Frame>
