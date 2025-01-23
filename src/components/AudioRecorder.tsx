@@ -14,16 +14,23 @@ const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
     mediaBlobUrl,
   } = useReactMediaRecorder({ audio: true });
 
+  const handlePauseRecording = () => {
+    pauseRecording();
+    // Do not finalize the recording here, so skip onRecordingComplete
+  };
+
   const handleStopRecording = async () => {
     stopRecording();
-    // Wait a moment for the blob to finalize
+    // Wait a bit for mediaBlobUrl to update
     setTimeout(async () => {
-      const response = await fetch(mediaBlobUrl || "");
-      const blob = await response.blob();
-      const file = new File([blob], "recording.mp3", { type: "audio/mp3" });
-      const url = await URL.createObjectURL(file);
-      onRecordingComplete(file, url);
-    }, 2000);
+      if (mediaBlobUrl) {
+        const response = await fetch(mediaBlobUrl);
+        const blob = await response.blob();
+        const file = new File([blob], "recording.mp3", { type: "audio/mp3" });
+        const url = URL.createObjectURL(file);
+        onRecordingComplete(file, url);
+      }
+    }, 500);
   };
 
   return (
@@ -37,12 +44,14 @@ const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
       {status === "paused" && (
         <p className="text-orange-400">Recording status: Paused</p>
       )}
-      <p className="text-red-500">Recording status: Stopped</p>
+      {status !== "recording" && status !== "paused" && (
+        <p className="text-red-500">Recording status: Stopped</p>
+      )}
       <div className="flex items-center gap-2">
         <Button color="blue" onClick={startRecording}>
           Start
         </Button>
-        <Button color="yellow" onClick={pauseRecording}>
+        <Button color="yellow" onClick={handlePauseRecording}>
           Pause
         </Button>
         <Button color="red" onClick={handleStopRecording}>
