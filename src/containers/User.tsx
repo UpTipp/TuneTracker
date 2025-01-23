@@ -764,6 +764,10 @@ const User = () => {
     }
   };
 
+  const clearItemMemory = () => {
+    setItemMemory([]);
+  };
+
   return (
     <Frame>
       <div className="pt-4 pb-4 pr-1 pl-1 md:pr-10 md:pl-10 lg:pr-20 lg:pl-20">
@@ -834,16 +838,25 @@ const User = () => {
                     <Accordion.Content>
                       <div className="flex flex-col gap-2">
                         <div className="flex flex-col gap-2 pb-2">
-                          <Button onClick={() => practiceOldest(tunes, "tune")}>
+                          <Button
+                            className="bg-emerald-300 hover:bg-emerald-400"
+                            onClick={() => practiceOldest(tunes, "tune")}
+                          >
                             Practice Oldest
                           </Button>
-                          <Button onClick={() => randomPractice(tunes, "tune")}>
+                          <Button
+                            className="bg-emerald-300 hover:bg-emerald-400"
+                            onClick={() => randomPractice(tunes, "tune")}
+                          >
                             Random Practice
                           </Button>
                         </div>
                         <HR />
                         <div className="flex flex-col gap-2">
-                          <Dropdown label="Sort By">
+                          <Dropdown
+                            label="Sort By"
+                            className="bg-teal-300 hover:bg-teal-400"
+                          >
                             <Dropdown.Item
                               onClick={() =>
                                 setSortBy((prev) => ({
@@ -885,7 +898,11 @@ const User = () => {
                               Last Practiced
                             </Dropdown.Item>
                           </Dropdown>
-                          <Dropdown label="Filter By" dismissOnClick={false}>
+                          <Dropdown
+                            label="Filter By"
+                            className="bg-teal-300 hover:bg-teal-400"
+                            dismissOnClick={false}
+                          >
                             <div className="max-h-96 overflow-y-auto">
                               <FilterCheckbox
                                 label="All Time"
@@ -1017,7 +1034,10 @@ const User = () => {
                               />
                             </div>
                           </Dropdown>
-                          <Button onClick={() => resetFilters("tunes")}>
+                          <Button
+                            onClick={() => resetFilters("tunes")}
+                            className="bg-red-300 hover:bg-red-400"
+                          >
                             Reset
                           </Button>
                         </div>
@@ -1380,7 +1400,7 @@ const User = () => {
         {itemMemory.length > 1 && (
           <div className="flex flex-row justify-right gap-0 fixed bottom-10 left-4 py-2 px-4 rounded-tr-full rounded-br-full shadow-lg z-50">
             <Button
-              onClick={() => setItemMemory([])}
+              onClick={clearItemMemory}
               className="bg-gray-400 hover:bg-gray-500"
             >
               <IoIosClose />

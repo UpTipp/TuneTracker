@@ -21,9 +21,9 @@ const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
       const response = await fetch(mediaBlobUrl || "");
       const blob = await response.blob();
       const file = new File([blob], "recording.mp3", { type: "audio/mp3" });
-      const url = URL.createObjectURL(file);
+      const url = await URL.createObjectURL(file);
       onRecordingComplete(file, url);
-    }, 500);
+    }, 2000);
   };
 
   return (
@@ -31,7 +31,13 @@ const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
       <div className="mb-2 block">
         <Label value="Record Audio" />
       </div>
-      <p>Recording status: {status}</p>
+      {status === "recording" && (
+        <p className="text-green-400">Recording status: Recording...</p>
+      )}
+      {status === "paused" && (
+        <p className="text-orange-400">Recording status: Paused</p>
+      )}
+      <p className="text-red-500">Recording status: Stopped</p>
       <div className="flex items-center gap-2">
         <Button color="blue" onClick={startRecording}>
           Start
@@ -42,9 +48,6 @@ const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
         <Button color="red" onClick={handleStopRecording}>
           Stop
         </Button>
-        {mediaBlobUrl && (
-          <audio src={mediaBlobUrl} controls style={{ display: "inline" }} />
-        )}
       </div>
     </div>
   );
