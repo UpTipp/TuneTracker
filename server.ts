@@ -854,7 +854,7 @@ app.put(
       let updatedRecordings: string[] = [];
 
       // Process the commands for existing files
-      fileCommands.forEach((command: string, index: number) => {
+      fileCommands.forEach(async (command: string, index: number) => {
         console.log(`Processing command: ${command} for index: ${index}`);
         if (index >= existingRecordings.length) {
           return; // Skip if the index is out of bounds
@@ -864,6 +864,9 @@ app.put(
         if (command === "delete") {
           // Delete the file
           console.log(`Deleting file: ${existingFile}`);
+          let path = existingFile.split("/").slice(-2).join("/");
+          console.log("Path:", path);
+          await minioClient.removeObject("audio-files", path);
         } else if (command === "keep") {
           // Keep the file (renamed later)
           updatedRecordings.push(existingFile);
@@ -1042,7 +1045,7 @@ app.put(
       let updatedRecordings: string[] = [];
 
       // Process the commands for existing files
-      fileCommands.forEach((command: string, index: number) => {
+      fileCommands.forEach(async (command: string, index: number) => {
         console.log(`Processing command: ${command} for index: ${index}`);
         if (index >= existingRecordings.length) {
           return; // Skip if the index is out of bounds
@@ -1052,6 +1055,9 @@ app.put(
         if (command === "delete") {
           // Delete the file
           console.log(`Deleting file: ${existingFile}`);
+          let path = existingFile.split("/").slice(-2).join("/");
+          console.log("Path:", path);
+          await minioClient.removeObject("audio-files", path);
         } else if (command === "keep") {
           // Keep the file (renamed later)
           updatedRecordings.push(existingFile);
@@ -1182,7 +1188,7 @@ app.put(
       let updatedRecordings: string[] = [];
 
       // Process the commands for existing files
-      fileCommands.forEach((command: string, index: number) => {
+      fileCommands.forEach(async (command: string, index: number) => {
         console.log(`Processing command: ${command} for index: ${index}`);
         if (index >= existingRecordings.length) {
           return; // Skip if the index is out of bounds
@@ -1192,6 +1198,9 @@ app.put(
         if (command === "delete") {
           // Delete the file
           console.log(`Deleting file: ${existingFile}`);
+          let path = existingFile.split("/").slice(-2).join("/");
+          console.log("Path:", path);
+          await minioClient.removeObject("audio-files", path);
         } else if (command === "keep") {
           // Keep the file (renamed later)
           updatedRecordings.push(existingFile);
