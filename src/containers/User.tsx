@@ -272,7 +272,12 @@ const FilterButtons = ({
           )}
         </div>
       </Dropdown>
-      <Button onClick={() => resetFilters(type)}>Reset</Button>
+      <Button
+        className="bg-red-300 hover:enabled:bg-red-400"
+        onClick={() => resetFilters(type)}
+      >
+        Reset
+      </Button>
     </>
   );
 
@@ -1043,7 +1048,7 @@ const User = () => {
                           </Dropdown>
                           <Button
                             onClick={() => resetFilters("tunes")}
-                            className="bg-red-300 hover:bg-red-400"
+                            className="bg-red-300 hover:enabled:bg-red-400"
                           >
                             Reset
                           </Button>
@@ -1214,7 +1219,7 @@ const User = () => {
                           </Dropdown>
                           <Button
                             onClick={() => resetFilters("sets")}
-                            className="bg-red-300 hover:bg-red-400"
+                            className="bg-red-300 hover:enabled:bg-red-400"
                           >
                             Reset
                           </Button>
@@ -1389,7 +1394,7 @@ const User = () => {
                           </Dropdown>
                           <Button
                             onClick={() => resetFilters("sessions")}
-                            className="bg-red-300 hover:bg-red-400"
+                            className="bg-red-300 hover:enabled:bg-red-400"
                           >
                             Reset
                           </Button>

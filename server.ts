@@ -25,6 +25,8 @@ import multer from "multer";
 import fs from "fs";
 import { Client } from "minio";
 import ffmpeg from "fluent-ffmpeg";
+import ffmpegPath from "@ffmpeg-installer/ffmpeg";
+ffmpeg.setFfmpegPath(ffmpegPath.path);
 
 dotenv.config(); // Initialize dotenv
 
@@ -152,72 +154,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static files from the 'build' directory
-app.use("/", express.static(path.join(__dirname, "./build")));
-
-// Remove all existing static file serving for audio files and replace with this:
-const serveAudio = (directory: string) => {
-  return (req, res, next) => {
-    if (!req.path.endsWith(".mp3")) {
-      return next();
-    }
-
-    const filePath = path.join(__dirname, directory, req.path);
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).send("File not found");
-    }
-
-    const stat = fs.statSync(filePath);
-    const fileSize = stat.size;
-
-    // Set essential headers for audio streaming
-    res.set({
-      "Content-Type": "audio/mpeg",
-      "Content-Length": fileSize,
-      "Accept-Ranges": "bytes",
-      "Cache-Control": "no-cache",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers": "Range",
-    });
-
-    // Handle range requests
-    const range = req.headers.range;
-    if (range) {
-      const parts = range.replace(/bytes=/, "").split("-");
-      const start = parseInt(parts[0], 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-      const chunksize = end - start + 1;
-
-      const partialHeaders = {
-        "Content-Type": "audio/mpeg",
-        "Accept-Ranges": "bytes",
-        "Cache-Control": "no-cache",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Range",
-      };
-
-      res.writeHead(206, "Partial Content", {
-        ...partialHeaders,
-        "Content-Range": `bytes ${start}-${end}/${fileSize}`,
-        "Content-Length": chunksize,
-      });
-
-      const stream = fs.createReadStream(filePath, { start, end });
-      stream.pipe(res);
-    } else {
-      fs.createReadStream(filePath).pipe(res);
-    }
-  };
-};
-
-// Apply the audio middleware to each upload directory
-app.use("/uploads/tunes", serveAudio("uploads/tunes"));
-app.use("/uploads/sets", serveAudio("uploads/sets"));
-app.use("/uploads/sessions", serveAudio("uploads/sessions"));
-
-// Serve static files (non-audio)
-app.use("/", express.static(path.join(__dirname, "./build")));
-
 // Google Passport Continued
 const GOOGLE_CLIENT_ID: string = process.env.GOOGLE_CLIENT_ID!;
 const GOOGLE_CLIENT_SECRET: string = process.env.GOOGLE_CLIENT_SECRET!;
@@ -344,6 +280,8 @@ initializeMinio().catch(console.error);
 const uploadToMinio = async (file: Express.Multer.File, path: string) => {
   const metaData = {
     "Content-Type": "audio/mpeg",
+    "Content-Disposition": `inline; filename="${file.originalname}"`,
+    "Cache-Control": "no-cache",
   };
   await minioClient.putObject(
     "audio-files",
