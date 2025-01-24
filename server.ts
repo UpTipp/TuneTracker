@@ -276,24 +276,48 @@ const initializeMinio = async () => {
 
 initializeMinio().catch(console.error);
 
-// Modify the file upload middleware to use Minio
+// Modify the file upload middleware to use Minio and convert to MP3
 const uploadToMinio = async (file: Express.Multer.File, path: string) => {
-  const metaData = {
-    "Content-Type": "audio/mpeg",
-    "Content-Disposition": `inline; filename="${file.originalname}"`,
-    "Cache-Control": "no-cache",
-  };
-  await minioClient.putObject(
-    "audio-files",
-    path,
-    file.buffer,
-    file.size,
-    metaData
-  );
+  const inputFile = `/tmp/${Date.now()}-${file.originalname}`;
+  const outputFile = `/tmp/${Date.now()}-converted.mp3`;
 
-  // Generate the URL for the uploaded file
-  const fileUrl = `${process.env.MAIN_DOMAIN}/audio/${path}`;
-  return fileUrl;
+  // Write the uploaded file to a temp directory
+  fs.writeFileSync(inputFile, new Uint8Array(file.buffer));
+
+  return new Promise<string>((resolve, reject) => {
+    ffmpeg(inputFile)
+      .audioCodec("libmp3lame")
+      .format("mp3")
+      .on("error", (err) => {
+        console.error("Error converting audio:", err);
+        fs.unlinkSync(inputFile);
+        reject(err);
+      })
+      .on("end", async () => {
+        const mp3Buffer = fs.readFileSync(outputFile);
+        const metaData = {
+          "Content-Type": "audio/mpeg",
+          "Content-Disposition": `inline; filename="${file.originalname}"`,
+          "Cache-Control": "no-cache",
+        };
+        await minioClient.putObject(
+          "audio-files",
+          path,
+          mp3Buffer,
+          mp3Buffer.length,
+          metaData
+        );
+
+        // Clean up temporary files
+        fs.unlinkSync(inputFile);
+        fs.unlinkSync(outputFile);
+
+        // Generate the URL for the uploaded file
+        const fileUrl = `${process.env.MAIN_DOMAIN}/audio/${path}`;
+        resolve(fileUrl);
+      })
+      .save(outputFile);
+  });
 };
 
 const upload = multer({ storage: multer.memoryStorage() });
