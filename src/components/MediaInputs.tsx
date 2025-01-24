@@ -9,30 +9,32 @@ const MediaInputs = ({ setFiles, setFileURLs, files, fileURLs }) => {
     setFileURLs((prev) => [...prev, url]);
   };
 
-  const addFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files || event.target.files.length === 0) return;
-    const newFiles = await Promise.all(
-      Array.from(event.target.files).map(async (file) => {
+  const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+
+    const convertedFiles = await Promise.all(
+      Array.from(e.target.files).map(async (file) => {
         if (file.type.includes("video")) {
           const formData = new FormData();
           formData.append("file", file);
-
-          const res = await fetch("/api/extract-audio", {
-            method: "POST",
-            body: formData,
-          });
-          if (!res.ok) {
-            console.error("Failed to convert video to audio:", file.name);
-            return null;
+          try {
+            const res = await fetch("/api/extract-audio", {
+              method: "POST",
+              body: formData,
+            });
+            if (!res.ok) throw new Error("Failed to convert video to audio");
+            const mp3Blob = await res.blob();
+            return new File([mp3Blob], "converted.mp3", { type: "audio/mp3" });
+          } catch (err) {
+            console.error(err);
+            return file; // fallback to original
           }
-          const mp3Blob = await res.blob();
-          return new File([mp3Blob], "converted.mp3", { type: "audio/mp3" });
         }
         return file;
       })
     );
 
-    const validFiles = newFiles.filter((f) => f) as File[];
+    const validFiles = convertedFiles.filter((f) => f) as File[];
     setFiles([...files, ...validFiles]);
 
     validFiles.forEach((file) => {
@@ -43,7 +45,7 @@ const MediaInputs = ({ setFiles, setFileURLs, files, fileURLs }) => {
       };
     });
 
-    event.target.value = "";
+    e.target.value = "";
   };
 
   const removeFile = (index: number) => {
@@ -60,7 +62,7 @@ const MediaInputs = ({ setFiles, setFileURLs, files, fileURLs }) => {
       <FileUploadSection
         files={files}
         fileURLs={fileURLs}
-        onFileAdd={addFile}
+        onFileAdd={handleFiles}
       />
 
       {/* Files */}

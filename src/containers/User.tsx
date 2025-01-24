@@ -100,8 +100,18 @@ const ActionButtons = ({
 
   return (
     <>
-      <Button onClick={onPracticeOldest}>Practice Oldest</Button>
-      <Button onClick={onRandomPractice}>Random Practice</Button>
+      <Button
+        onClick={onPracticeOldest}
+        className="bg-emerald-300 hover:enabled:bg-emerald-400"
+      >
+        Practice Oldest
+      </Button>
+      <Button
+        onClick={onRandomPractice}
+        className="bg-emerald-300 hover:enabled:bg-emerald-400"
+      >
+        Random Practice
+      </Button>
     </>
   );
 };
@@ -839,7 +849,7 @@ const User = () => {
                       <div className="flex flex-col gap-2">
                         <div className="flex flex-col gap-2 pb-2">
                           <Button
-                            className="bg-emerald-300 hover:bg-emerald-400"
+                            className="bg-emerald-300 hover:enabled:bg-emerald-400"
                             onClick={() => practiceOldest(tunes, "tune")}
                           >
                             Practice Oldest
@@ -853,10 +863,7 @@ const User = () => {
                         </div>
                         <HR />
                         <div className="flex flex-col gap-2">
-                          <Dropdown
-                            label="Sort By"
-                            className="bg-teal-300 hover:bg-teal-400"
-                          >
+                          <Dropdown label="Sort By">
                             <Dropdown.Item
                               onClick={() =>
                                 setSortBy((prev) => ({
@@ -1108,10 +1115,16 @@ const User = () => {
                     <Accordion.Content>
                       <div className="flex flex-col gap-2">
                         <div className="flex flex-col gap-2 pb-2">
-                          <Button onClick={() => practiceOldest(sets, "set")}>
+                          <Button
+                            className="bg-emerald-300 hover:enabled:bg-emerald-400"
+                            onClick={() => randomPractice(sets, "set")}
+                          >
                             Practice Oldest
                           </Button>
-                          <Button onClick={() => randomPractice(sets, "set")}>
+                          <Button
+                            className="bg-emerald-300 hover:bg-emerald-400"
+                            onClick={() => randomPractice(sets, "set")}
+                          >
                             Random Practice
                           </Button>
                         </div>
@@ -1199,7 +1212,10 @@ const User = () => {
                               />
                             </div>
                           </Dropdown>
-                          <Button onClick={() => resetFilters("sets")}>
+                          <Button
+                            onClick={() => resetFilters("sets")}
+                            className="bg-red-300 hover:bg-red-400"
+                          >
                             Reset
                           </Button>
                         </div>
@@ -1275,12 +1291,14 @@ const User = () => {
                       <div className="flex flex-col gap-2">
                         <div className="flex flex-col gap-2 pb-2">
                           <Button
+                            className="bg-emerald-300 hover:enabled:bg-emerald-400"
                             onClick={() => practiceOldest(sessions, "session")}
                           >
                             Practice Oldest
                           </Button>
                           <Button
-                            onClick={() => randomPractice(sessions, "session")}
+                            className="bg-emerald-300 hover:bg-emerald-400"
+                            onClick={() => practiceOldest(sessions, "session")}
                           >
                             Random Practice
                           </Button>
@@ -1369,7 +1387,10 @@ const User = () => {
                               />
                             </div>
                           </Dropdown>
-                          <Button onClick={() => resetFilters("sessions")}>
+                          <Button
+                            onClick={() => resetFilters("sessions")}
+                            className="bg-red-300 hover:bg-red-400"
+                          >
                             Reset
                           </Button>
                         </div>

@@ -1668,27 +1668,30 @@ app.get("/audio/:type/:id/:file", async (req, res) => {
 app.post("/api/extract-audio", upload.single("file"), async (req, res) => {
   const file = req.file;
   if (!file) {
-    return res.status(400).send("No file provided");
+    return res.status(400).send("No file received");
   }
-  try {
-    const inputPath = file.path || file.originalname;
-    ffmpeg()
-      .input(file.buffer)
-      .noVideo()
-      .audioCodec("libmp3lame")
-      .format("mp3")
-      .on("error", (err) => {
-        console.error("[ffmpeg] Conversion error:", err);
-        return res.status(500).send("Audio extraction failed");
-      })
-      .on("end", () => {
-        // Optionally store or return the extracted file
-      })
-      .pipe(res, { end: true });
-  } catch (error) {
-    console.error("Error extracting audio:", error);
-    return res.status(500).send("Error extracting audio");
-  }
+
+  // Write the uploaded file to a temp directory
+  const inputFile = `/tmp/${Date.now()}-${file.originalname}`;
+  const outputFile = `/tmp/${Date.now()}-converted.mp3`;
+  fs.writeFileSync(inputFile, new Uint8Array(file.buffer));
+
+  ffmpeg(inputFile)
+    .audioCodec("libmp3lame")
+    .format("mp3")
+    .on("error", (err) => {
+      console.error("Error extracting audio:", err);
+      fs.unlinkSync(inputFile);
+      return res.status(500).send("Failed to convert audio");
+    })
+    .on("end", () => {
+      const mp3Buffer = fs.readFileSync(outputFile);
+      res.set("Content-Type", "audio/mpeg");
+      res.send(mp3Buffer);
+      fs.unlinkSync(inputFile);
+      fs.unlinkSync(outputFile);
+    })
+    .save(outputFile);
 });
 
 // Keep only these static file servings:

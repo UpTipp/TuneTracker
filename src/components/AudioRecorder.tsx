@@ -6,31 +6,23 @@ interface AudioRecorderProps {
 }
 
 const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
-  const {
-    status,
-    startRecording,
-    stopRecording,
-    pauseRecording,
-    mediaBlobUrl,
-  } = useReactMediaRecorder({ audio: true });
-
-  const handlePauseRecording = () => {
-    pauseRecording();
-    // Do not finalize the recording here, so skip onRecordingComplete
-  };
-
-  const handleStopRecording = async () => {
-    stopRecording();
-    // Wait a bit for mediaBlobUrl to update
-    setTimeout(async () => {
-      if (mediaBlobUrl) {
-        const response = await fetch(mediaBlobUrl);
-        const blob = await response.blob();
+  const { status, startRecording, pauseRecording, stopRecording } =
+    useReactMediaRecorder({
+      audio: true,
+      onStop: async (blobUrl, blob) => {
         const file = new File([blob], "recording.mp3", { type: "audio/mp3" });
         const url = URL.createObjectURL(file);
         onRecordingComplete(file, url);
-      }
-    }, 500);
+      },
+    });
+
+  const handlePauseRecording = () => {
+    pauseRecording();
+    // No finalization here
+  };
+
+  const handleStopRecording = () => {
+    stopRecording();
   };
 
   return (
