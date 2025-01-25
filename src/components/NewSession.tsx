@@ -6,7 +6,7 @@ import DraggableList from "./DraggableList";
 import LinksSection from "./LinksSection";
 import MediaInputs from "./MediaInputs";
 
-const NewSession = ({ dataFetch, userTunes, userSets }) => {
+const NewSession = ({ dataFetch, userTunes, userSets, goTo }) => {
   const [openModal, setOpenModal] = useState(false);
 
   // Inputs
@@ -179,6 +179,11 @@ const NewSession = ({ dataFetch, userTunes, userSets }) => {
       dataFetch();
       setOpenModal(false);
       onCloseModal();
+
+      let sessionId = result.sessionId;
+      setTimeout(() => {
+        goTo("session", sessionId);
+      }, 1000);
     } catch (error) {
       console.error("Error:", error);
     }

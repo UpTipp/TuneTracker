@@ -21,6 +21,7 @@ import DisplaySession from "../components/DisplaySession";
 import { useUserData } from "../hooks/useUserData";
 import { HiPlus } from "react-icons/hi";
 import { IoIosClose } from "react-icons/io";
+import { TUNE_TYPES, TUNE_KEYS } from "../shared/TuneOptions";
 
 // Add these types at the top of the file, after imports
 type TimeframeFilter = {
@@ -223,51 +224,14 @@ const FilterButtons = ({
                 checked={filterBy.tunes.type.all}
                 onChange={handleCheckboxClick("tunes", "type", "all")}
               />
-              <FilterCheckbox
-                label="Reel"
-                checked={filterBy.tunes.type.reel}
-                onChange={handleCheckboxClick("tunes", "type", "reel")}
-              />
-              <FilterCheckbox
-                label="Jig"
-                checked={filterBy.tunes.type.jig}
-                onChange={handleCheckboxClick("tunes", "type", "jig")}
-              />
-              <FilterCheckbox
-                label="Hornpipe"
-                checked={filterBy.tunes.type.hornpipe}
-                onChange={handleCheckboxClick("tunes", "type", "hornpipe")}
-              />
-              <FilterCheckbox
-                label="Slip Jig"
-                checked={filterBy.tunes.type["slip jig"]}
-                onChange={handleCheckboxClick("tunes", "type", "slip jig")}
-              />
-              <FilterCheckbox
-                label="Polka"
-                checked={filterBy.tunes.type.polka}
-                onChange={handleCheckboxClick("tunes", "type", "polka")}
-              />
-              <FilterCheckbox
-                label="Slide"
-                checked={filterBy.tunes.type.slide}
-                onChange={handleCheckboxClick("tunes", "type", "slide")}
-              />
-              <FilterCheckbox
-                label="Waltz"
-                checked={filterBy.tunes.type.waltz}
-                onChange={handleCheckboxClick("tunes", "type", "waltz")}
-              />
-              <FilterCheckbox
-                label="Mazurka"
-                checked={filterBy.tunes.type.mazurka}
-                onChange={handleCheckboxClick("tunes", "type", "mazurka")}
-              />
-              <FilterCheckbox
-                label="Other"
-                checked={filterBy.tunes.type.other}
-                onChange={handleCheckboxClick("tunes", "type", "other")}
-              />
+              {TUNE_TYPES.map((tuneType) => (
+                <FilterCheckbox
+                  key={tuneType}
+                  label={tuneType}
+                  checked={filterBy.tunes.type[tuneType]}
+                  onChange={handleCheckboxClick("tunes", "type", tuneType)}
+                />
+              ))}
             </>
           )}
         </div>
@@ -813,7 +777,7 @@ const User = () => {
             <div className="flex flex-row justify-between w-full gap-4 flex-wrap">
               <div className="flex items-center gap-2">
                 {id === userId.current && (
-                  <NewTune dataFetch={triggerDataFetch} />
+                  <NewTune dataFetch={triggerDataFetch} goTo={goTo} />
                 )}
                 <TextInput
                   type="text"
@@ -963,87 +927,18 @@ const User = () => {
                                   "all"
                                 )}
                               />
-                              <FilterCheckbox
-                                label="Reel"
-                                checked={filterBy.tunes.type.reel}
-                                onChange={handleCheckboxClick(
-                                  "tunes",
-                                  "type",
-                                  "reel"
-                                )}
-                              />
-                              <FilterCheckbox
-                                label="Jig"
-                                checked={filterBy.tunes.type.jig}
-                                onChange={handleCheckboxClick(
-                                  "tunes",
-                                  "type",
-                                  "jig"
-                                )}
-                              />
-                              <FilterCheckbox
-                                label="Hornpipe"
-                                checked={filterBy.tunes.type.hornpipe}
-                                onChange={handleCheckboxClick(
-                                  "tunes",
-                                  "type",
-                                  "hornpipe"
-                                )}
-                              />
-                              <FilterCheckbox
-                                label="Slip Jig"
-                                checked={filterBy.tunes.type["slip jig"]}
-                                onChange={handleCheckboxClick(
-                                  "tunes",
-                                  "type",
-                                  "slip jig"
-                                )}
-                              />
-                              <FilterCheckbox
-                                label="Polka"
-                                checked={filterBy.tunes.type.polka}
-                                onChange={handleCheckboxClick(
-                                  "tunes",
-                                  "type",
-                                  "polka"
-                                )}
-                              />
-                              <FilterCheckbox
-                                label="Slide"
-                                checked={filterBy.tunes.type.slide}
-                                onChange={handleCheckboxClick(
-                                  "tunes",
-                                  "type",
-                                  "slide"
-                                )}
-                              />
-                              <FilterCheckbox
-                                label="Waltz"
-                                checked={filterBy.tunes.type.waltz}
-                                onChange={handleCheckboxClick(
-                                  "tunes",
-                                  "type",
-                                  "waltz"
-                                )}
-                              />
-                              <FilterCheckbox
-                                label="Mazurka"
-                                checked={filterBy.tunes.type.mazurka}
-                                onChange={handleCheckboxClick(
-                                  "tunes",
-                                  "type",
-                                  "mazurka"
-                                )}
-                              />
-                              <FilterCheckbox
-                                label="Other"
-                                checked={filterBy.tunes.type.other}
-                                onChange={handleCheckboxClick(
-                                  "tunes",
-                                  "type",
-                                  "other"
-                                )}
-                              />
+                              {TUNE_TYPES.map((tuneType) => (
+                                <FilterCheckbox
+                                  key={tuneType}
+                                  label={tuneType}
+                                  checked={filterBy.tunes.type[tuneType]}
+                                  onChange={handleCheckboxClick(
+                                    "tunes",
+                                    "type",
+                                    tuneType
+                                  )}
+                                />
+                              ))}
                             </div>
                           </Dropdown>
                           <Button
@@ -1082,7 +977,11 @@ const User = () => {
             <div className="flex flex-row justify-between w-full gap-4 flex-wrap">
               <div className="flex items-center gap-2">
                 {id === userId.current && (
-                  <NewSet dataFetch={triggerDataFetch} userTunes={tunes} />
+                  <NewSet
+                    dataFetch={triggerDataFetch}
+                    userTunes={tunes}
+                    goTo={goTo}
+                  />
                 )}
                 <TextInput
                   type="text"
@@ -1257,6 +1156,7 @@ const User = () => {
                     dataFetch={triggerDataFetch}
                     userTunes={tunes}
                     userSets={sets}
+                    goTo={goTo}
                   />
                 )}
                 <TextInput

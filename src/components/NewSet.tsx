@@ -46,7 +46,7 @@ const SortableItem = ({ tune, onRemove }) => {
   );
 };
 
-const NewSet = ({ dataFetch, userTunes }) => {
+const NewSet = ({ dataFetch, userTunes, goTo }) => {
   const [openModal, setOpenModal] = useState(false);
 
   // Inputs
@@ -177,6 +177,11 @@ const NewSet = ({ dataFetch, userTunes }) => {
       dataFetch();
       setOpenModal(false);
       onCloseModal();
+
+      let setId = result.setId;
+      setTimeout(() => {
+        goTo("set", setId);
+      }, 1000);
     } catch (error) {
       console.error("Error:", error);
     }

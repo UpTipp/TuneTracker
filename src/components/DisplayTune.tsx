@@ -1,17 +1,17 @@
 import { useState } from "react";
-import { Card, Button } from "flowbite-react";
+import { Card, Button, Modal, HR } from "flowbite-react";
 import {
   IoIosArrowDropleftCircle,
   IoIosArrowDroprightCircle,
 } from "react-icons/io";
 import ItemHeader from "./ItemHeader";
-import ReactPlayer from "react-player";
 import Cookie from "js-cookie";
 import UpdatePractice from "./UpdatePractice";
 import UpdateTune from "./UpdateTune";
 import AddItem from "./AddItem";
 import CopyItem from "./CopyItem";
 import AudioPlayer from "./AudioPlayer";
+import ItemState from "./ItemState";
 
 const customCard = {
   root: {
@@ -21,9 +21,9 @@ const customCard = {
 
 const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
   const checkId = JSON.parse(Cookie.get("user") || "{}").id;
-  const [isFlipped, setIsFlipped] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
-  const handleCardClick = (event) => {
+  const checkCardClick = (event) => {
     if (
       event.target.closest(".non-clickable") ||
       event.target.tagName === "BUTTON" ||
@@ -38,7 +38,7 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
     ) {
       return;
     }
-    setIsFlipped(!isFlipped);
+    setShowModal(true);
   };
 
   const linkClink = (type: string, id: string) => {
@@ -58,105 +58,215 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
   let lastPracticeStr = lastPractice ? lastPractice.toDateString() : null;
 
   const hasBackContent =
-    (tune.link && tune.link.length > 0) ||
+    (tune.links && tune.links.length > 0) ||
     (tune.creatorComments && tune.creatorComments !== "") ||
     (tune.recordingRef && tune.recordingRef.length > 0);
 
   return (
-    <Card
-      onClick={hasBackContent ? handleCardClick : undefined}
-      theme={customCard}
-      id={"tu:" + tune.tuneId}
-      className="w-full max-w-lg border-2 hover:border-blue-400 flex flex-col justify-between"
-    >
-      {isFlipped ? (
-        // Back of card
-        <>
-          <ItemHeader
-            itemName={tune.tuneName}
-            item={"tune"}
-            itemType={tune.tuneType}
-            itemState={tune.state}
-            itemId={tune.tuneId}
-            userId={userId}
-            dataFetch={dataFetch}
-          />
-          <div>
-            {tune.link && tune.link.length > 0 && (
-              <>
-                <div className="pt-1 pb-1">
-                  <h6 className="text-md mb-1">Links:</h6>
-                  <div className="p-2 border border-gray-600 bg-gray-300 bg-opacity-50 rounded-md flex justify-normal flex-wrap non-clickable">
-                    {Array.isArray(tune.link) &&
-                      tune.link.length > 0 &&
-                      tune.link.map((link, index) => (
-                        <>
-                          <a
-                            key={index}
-                            href={link}
-                            className="text-blue-600 text-sm w-min underline decoration-inherit"
-                          >
-                            {link}
-                          </a>
-                          {index < tune.link.length - 1 && <p>, </p>}
-                        </>
-                      ))}
-                  </div>
-                </div>
-              </>
-            )}
-            {tune.creatorComments &&
-              tune.creatorComments !== "" &&
-              tune.orgUserId !== userId && (
+    <>
+      <Card
+        onClick={() => checkCardClick}
+        theme={customCard}
+        id={"tu:" + tune.tuneId}
+        className="w-full max-w-lg border-2 hover:border-blue-400 flex flex-col justify-between"
+      >
+        <ItemHeader
+          itemName={tune.tuneName}
+          item={"tune"}
+          itemType={tune.tuneType}
+          itemState={tune.state}
+          itemId={tune.tuneId}
+          userId={userId}
+          dataFetch={dataFetch}
+        />
+        <HR />
+        <div>
+          {tune.tuneKey && tune.tuneKey !== "" ? (
+            <p className="text-sm">Key: {tune.tuneKey}</p>
+          ) : (
+            <p className="text-sm">[Unspecified Key]</p>
+          )}
+
+          {tune.author && tune.author !== "" ? (
+            <p className="">Author: {tune.author}</p>
+          ) : (
+            <p className="">[Unspecified Author]</p>
+          )}
+
+          {tune.lastPractice && (
+            <p className="text-sm italic pb-1">
+              {" "}
+              Last Practiced: {lastPracticeStr} ({dateDiffer} days ago)
+            </p>
+          )}
+
+          <div className="pt-1 pb-1">
+            <h6 className="text-md">Referenced In:</h6>
+
+            <div className="flex justify-normal flex-wrap non-clickable">
+              <p className="text-sm text-green-500 mr-1">Sets:</p>
+              {tune.setIds.map((setId, index) => (
                 <>
-                  <div className="pt-1 pb-1">
-                    <h6 className="text-md">Tracker's Comment:</h6>
-                    <div className="p-2 border border-gray-600 bg-gray-300 bg-opacity-50 rounded-md non-clickable">
-                      <p className="text-sm italic">{tune.creatorComments}</p>
+                  <a
+                    className="text-sm text-blue-400 hover:text-emerald-500"
+                    onClick={() => linkClink("set", setId)}
+                  >
+                    [
+                    {tune.setNames[index].length <= 20
+                      ? tune.setNames[index]
+                      : tune.setNames[index].substring(0, 20) + "..."}
+                    ]
+                  </a>
+                  {index < 2
+                    ? index < tune.setIds.length - 1 && (
+                        <p className="mr-1">,</p>
+                      )
+                    : index < tune.setIds.length - 1 && (
+                        <p className="mr-1">, ...</p>
+                      )}
+                </>
+              ))}
+            </div>
+            <div className="flex justify-normal flex-wrap non-clickable">
+              <p className="text-sm text-green-500 mr-1">Sessions:</p>
+              {tune.sessionIds.map((sessionId, index) => (
+                <>
+                  <a
+                    className="text-sm text-blue-400 hover:text-emerald-500"
+                    onClick={() => linkClink("session", sessionId)}
+                  >
+                    [{index}]
+                  </a>
+                  {index < 2
+                    ? index < tune.sessionIds.length - 1 && (
+                        <p className="mr-1">,</p>
+                      )
+                    : index < tune.sessionIds.length - 1 && (
+                        <p className="mr-1">, ...</p>
+                      )}
+                </>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="flex-grow"></div>
+        <HR />
+        <div className="flex justify-between pt-1">
+          {userId === checkId ? (
+            <>
+              {userId === tune.orgUserId ? (
+                <>
+                  <UpdatePractice
+                    type={"tune"}
+                    id={tune.tuneId}
+                    userId={userId}
+                    dataFetch={dataFetch}
+                  />
+                  {hasBackContent ? (
+                    <div className="flex justify-center items-center">
+                      <IoIosArrowDroprightCircle className="arrow opacity-60" />
                     </div>
+                  ) : (
+                    <div className="flex justify-center items-center">
+                      <IoIosArrowDroprightCircle className="arrow opacity-0" />
+                    </div>
+                  )}
+                  <div className="non-clickable">
+                    <UpdateTune
+                      type={"tune"}
+                      itemId={tune.tuneId}
+                      tune={tune}
+                      dataFetch={dataFetch}
+                    />
                   </div>
                 </>
+              ) : (
+                <>
+                  <CopyItem />
+                  {hasBackContent ? (
+                    <div className="flex justify-center items-center">
+                      <IoIosArrowDroprightCircle className="arrow opacity-60" />
+                    </div>
+                  ) : (
+                    <div className="flex justify-center items-center">
+                      <IoIosArrowDroprightCircle className="arrow opacity-0" />
+                    </div>
+                  )}
+                  <UpdatePractice
+                    type={"tune"}
+                    id={tune.tuneId}
+                    userId={userId}
+                    dataFetch={dataFetch}
+                  />
+                </>
               )}
-            {tune.recordingRef && tune.recordingRef.length > 0 && (
-              <>
-                <div className="pt-1 pb-1">
-                  <h6 className="text-md">Recording(s):</h6>
-                  <div className="p-2 border border-gray-600 bg-gray-300 bg-opacity-50 rounded-md non-clickable">
-                    {tune.recordingRef.map((recording, index) => (
-                      <AudioPlayer
-                        key={`${tune.tuneId}-${recording}-${index}`} // combines tuneId with recording
-                        url={recording}
-                        className="ml-2"
-                      />
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-          <div className="flex-grow"></div>
-          {hasBackContent ? (
-            <div className="w-full flex justify-center items-center pt-1 h-11">
-              <IoIosArrowDropleftCircle className="arrow opacity-60" />
-            </div>
+            </>
           ) : (
-            <div className="w-full flex justify-center items-center pt-1 h-11">
-              <IoIosArrowDropleftCircle className="arrow opacity-0" />
-            </div>
+            <>
+              {userId && checkId ? (
+                <>
+                  <CopyItem />
+                  {hasBackContent ? (
+                    <div className="flex justify-center items-center">
+                      <IoIosArrowDroprightCircle className="arrow opacity-60" />
+                    </div>
+                  ) : (
+                    <div className="flex justify-center items-center">
+                      <IoIosArrowDroprightCircle className="arrow opacity-0" />
+                    </div>
+                  )}
+                  <AddItem />
+                </>
+              ) : (
+                <>
+                  <Button
+                    className="bg-green-500 hover:enabled:bg-green-700"
+                    disabled
+                  >
+                    Copy
+                  </Button>
+                  {hasBackContent ? (
+                    <div className="flex justify-center items-center">
+                      <IoIosArrowDroprightCircle className="arrow opacity-60" />
+                    </div>
+                  ) : (
+                    <div className="flex justify-center items-center">
+                      <IoIosArrowDroprightCircle className="arrow opacity-0" />
+                    </div>
+                  )}
+                  <Button className="bg-blue-400" disabled>
+                    Add Tune
+                  </Button>
+                </>
+              )}
+            </>
           )}
-        </>
-      ) : (
-        // Front of card
-        <>
-          <ItemHeader
-            itemName={tune.tuneName}
-            item={"tune"}
-            itemType={tune.tuneType}
-            itemState={tune.state}
-            itemId={tune.tuneId}
-            userId={userId}
-            dataFetch={dataFetch}
-          />
+        </div>
+      </Card>
+
+      <Modal show={showModal} onClose={() => setShowModal(false)}>
+        <Modal.Header>{tune.tuneName}</Modal.Header>
+        <Modal.Body>
+          <h5 className="mb-2 text-lg font-semibold text-cyan-600">
+            {tune.tuneName}
+          </h5>
+          <div className="flex flex-row justify-between items-center">
+            <p className="text-center text-sm text-gray-400 italic">
+              {tune.state}
+            </p>
+            <div className="flex justify-end">
+              <ItemState
+                state={tune.state}
+                item={"tune"}
+                id={tune.tuneId}
+                userId={userId}
+                dataFetch={dataFetch}
+              />
+            </div>
+          </div>
+
+          <HR />
+
           <div>
             {tune.tuneKey && tune.tuneKey !== "" ? (
               <p className="text-sm">Key: {tune.tuneKey}</p>
@@ -177,72 +287,122 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
               </p>
             )}
 
+            {tune.dateAdded && (
+              <p className="text-sm italic pb-1"> Date Added: {dateAddedStr}</p>
+            )}
+            <div>
+              {/* Refernced In */}
+              <div className="pt-1 pb-1">
+                <h6 className="text-md">Referenced In:</h6>
+
+                <div className="flex justify-normal flex-wrap non-clickable">
+                  <p className="text-sm text-green-500 mr-1">Sets:</p>
+                  {tune.setIds.map((setId, index) => (
+                    <>
+                      <a
+                        className="text-sm text-blue-400 hover:text-emerald-500"
+                        onClick={() => linkClink("set", setId)}
+                      >
+                        [
+                        {tune.setNames[index].length <= 20
+                          ? tune.setNames[index]
+                          : tune.setNames[index].substring(0, 20) + "..."}
+                        ]
+                      </a>
+
+                      {index < tune.setIds.length - 1 && (
+                        <p className="mr-1">,</p>
+                      )}
+                    </>
+                  ))}
+                </div>
+                <div className="flex justify-normal flex-wrap non-clickable">
+                  <p className="text-sm text-green-500 mr-1">Sessions:</p>
+                  {tune.sessionIds.map((sessionId, index) => (
+                    <>
+                      <a
+                        className="text-sm text-blue-400 hover:text-emerald-500"
+                        onClick={() => linkClink("session", sessionId)}
+                      >
+                        [{index}]
+                      </a>
+                      {index < tune.sessionIds.length - 1 && (
+                        <p className="mr-1">, </p>
+                      )}
+                    </>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {tune.links && tune.links.length > 0 && (
+              <>
+                <div className="pt-1 pb-1">
+                  <h6 className="text-md mb-1">Links:</h6>
+                  <div className="p-2 border border-gray-600 bg-gray-300 bg-opacity-50 rounded-md flex justify-normal flex-wrap non-clickable">
+                    {Array.isArray(tune.links) &&
+                      tune.links.length > 0 &&
+                      tune.links.map((link, index) => (
+                        <>
+                          <a
+                            key={index}
+                            href={link}
+                            className="text-blue-600 text-sm w-min underline decoration-inherit"
+                          >
+                            {link}
+                          </a>
+                          {index < tune.links.length - 1 && <p>, </p>}
+                        </>
+                      ))}
+                  </div>
+                </div>
+              </>
+            )}
+            {tune.recordingRef && tune.recordingRef.length > 0 && (
+              <>
+                <div className="pt-1 pb-1">
+                  <h6 className="text-md">Recording(s):</h6>
+                  <div className="p-2 border border-gray-600 bg-gray-300 bg-opacity-50 rounded-md non-clickable">
+                    {tune.recordingRef.map((recording, index) => (
+                      <AudioPlayer
+                        key={`${tune.tuneId}-${recording}-${index}`} // combines tuneId with recording
+                        url={recording}
+                        className="ml-2"
+                      />
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
             {tune.creatorComments &&
               tune.creatorComments !== "" &&
-              tune.orgUserId === userId && (
+              tune.orgUserId !== userId && (
                 <>
                   <div className="pt-1 pb-1">
-                    <h6 className="text-md">User's Comment:</h6>
-                    <div className="p-2 border border-gray-600 bg-gray-300 bg-opacity-50 rounded-md">
+                    <h6 className="text-md">Tracker's Comment:</h6>
+                    <div className="p-2 border border-gray-600 bg-gray-300 bg-opacity-50 rounded-md non-clickable">
                       <p className="text-sm italic">{tune.creatorComments}</p>
                     </div>
                   </div>
                 </>
               )}
 
-            {tune.comments &&
-              tune.comments !== "" &&
-              tune.orgUserId !== userId && (
-                <div className="pt-1 pb-1">
-                  <h6 className="text-md">User's Comment:</h6>
-                  <div className="p-2 border border-gray-600 bg-gray-300 bg-opacity-50 rounded-md">
-                    <p className="text-sm italic">{tune.comments}</p>
+            {tune.creatorComments &&
+              tune.creatorComments !== "" &&
+              tune.orgUserId === userId && (
+                <>
+                  <div className="pt-1 pb-1">
+                    <h6 className="text-md">Your Comment:</h6>
+                    <div className="p-2 border border-gray-600 bg-gray-300 bg-opacity-50 rounded-md non-clickable">
+                      <p className="text-sm italic">{tune.creatorComments}</p>
+                    </div>
                   </div>
-                </div>
+                </>
               )}
-
-            <div className="pt-1 pb-1">
-              <h6 className="text-md">Referenced In:</h6>
-
-              <div className="flex justify-normal flex-wrap non-clickable">
-                <p className="text-sm text-green-500 mr-1">Sets:</p>
-                {tune.setIds.map((setId, index) => (
-                  <>
-                    <a
-                      className="text-sm text-blue-400 hover:text-emerald-500"
-                      onClick={() => linkClink("set", setId)}
-                    >
-                      [
-                      {tune.setNames[index].length <= 20
-                        ? tune.setNames[index]
-                        : tune.setNames[index].substring(0, 20) + "..."}
-                      ]
-                    </a>
-                    {index < tune.setIds.length - 1 && (
-                      <p className="mr-1">,</p>
-                    )}
-                  </>
-                ))}
-              </div>
-              <div className="flex justify-normal flex-wrap non-clickable">
-                <p className="text-sm text-green-500 mr-1">Sessions:</p>
-                {tune.sessionIds.map((sessionId, index) => (
-                  <>
-                    <a
-                      className="text-sm text-blue-400 hover:text-emerald-500"
-                      onClick={() => linkClink("session", sessionId)}
-                    >
-                      [{index}]
-                    </a>
-                    {index < tune.sessionIds.length - 1 && (
-                      <p className="mr-1">, </p>
-                    )}
-                  </>
-                ))}
-              </div>
-            </div>
           </div>
           <div className="flex-grow"></div>
+          <HR />
           <div className="flex justify-between pt-1">
             {userId === checkId ? (
               <>
@@ -254,15 +414,9 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
                       userId={userId}
                       dataFetch={dataFetch}
                     />
-                    {hasBackContent ? (
-                      <div className="flex justify-center items-center">
-                        <IoIosArrowDroprightCircle className="arrow opacity-60" />
-                      </div>
-                    ) : (
-                      <div className="flex justify-center items-center">
-                        <IoIosArrowDroprightCircle className="arrow opacity-0" />
-                      </div>
-                    )}
+                    <div className="flex justify-center items-center">
+                      <IoIosArrowDroprightCircle className="arrow opacity-60" />
+                    </div>
                     <div className="non-clickable">
                       <UpdateTune
                         type={"tune"}
@@ -275,15 +429,9 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
                 ) : (
                   <>
                     <CopyItem />
-                    {hasBackContent ? (
-                      <div className="flex justify-center items-center">
-                        <IoIosArrowDroprightCircle className="arrow opacity-60" />
-                      </div>
-                    ) : (
-                      <div className="flex justify-center items-center">
-                        <IoIosArrowDroprightCircle className="arrow opacity-0" />
-                      </div>
-                    )}
+                    <div className="flex justify-center items-center">
+                      <IoIosArrowDroprightCircle className="arrow opacity-60" />
+                    </div>
                     <UpdatePractice
                       type={"tune"}
                       id={tune.tuneId}
@@ -298,15 +446,9 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
                 {userId && checkId ? (
                   <>
                     <CopyItem />
-                    {hasBackContent ? (
-                      <div className="flex justify-center items-center">
-                        <IoIosArrowDroprightCircle className="arrow opacity-60" />
-                      </div>
-                    ) : (
-                      <div className="flex justify-center items-center">
-                        <IoIosArrowDroprightCircle className="arrow opacity-0" />
-                      </div>
-                    )}
+                    <div className="flex justify-center items-center">
+                      <IoIosArrowDroprightCircle className="arrow opacity-60" />
+                    </div>
                     <AddItem />
                   </>
                 ) : (
@@ -317,15 +459,9 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
                     >
                       Copy
                     </Button>
-                    {hasBackContent ? (
-                      <div className="flex justify-center items-center">
-                        <IoIosArrowDroprightCircle className="arrow opacity-60" />
-                      </div>
-                    ) : (
-                      <div className="flex justify-center items-center">
-                        <IoIosArrowDroprightCircle className="arrow opacity-0" />
-                      </div>
-                    )}
+                    <div className="flex justify-center items-center">
+                      <IoIosArrowDropleftCircle className="arrow opacity-60" />
+                    </div>
                     <Button className="bg-blue-400" disabled>
                       Add Tune
                     </Button>
@@ -334,9 +470,9 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
               </>
             )}
           </div>
-        </>
-      )}
-    </Card>
+        </Modal.Body>
+      </Modal>
+    </>
   );
 };
 

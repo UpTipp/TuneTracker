@@ -9,8 +9,9 @@ import {
 } from "flowbite-react";
 import LinksSection from "./LinksSection";
 import MediaInputs from "./MediaInputs";
+import { TUNE_TYPES, TUNE_KEYS } from "../shared/TuneOptions";
 
-const NewTune = ({ dataFetch }) => {
+const NewTune = ({ dataFetch, goTo }) => {
   const [openModal, setOpenModal] = useState(false);
 
   // Inputs
@@ -86,6 +87,11 @@ const NewTune = ({ dataFetch }) => {
       dataFetch();
       setOpenModal(false);
       onCloseModal();
+
+      let tuneId = result.tuneId;
+      setTimeout(() => {
+        goTo("tune", tuneId);
+      }, 1000);
     } catch (error) {
       console.error("Error:", error);
       // You might want to show an error message to the user here
@@ -132,15 +138,11 @@ const NewTune = ({ dataFetch }) => {
                 onChange={(event) => setTuneType(event.target.value)}
                 required
               >
-                <option value="Reel">Reel</option>
-                <option value="Jig">Jig</option>
-                <option value="Hornpipe">Hornpipe</option>
-                <option value="Slip Jig">Slip Jig</option>
-                <option value="Polka">Polka</option>
-                <option value="Slide">Slide</option>
-                <option value="Waltz">Waltz</option>
-                <option value="Mazurka">Mazurka</option>
-                <option value="Other">Other</option>
+                {TUNE_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
               </Select>
             </div>
 
@@ -155,39 +157,11 @@ const NewTune = ({ dataFetch }) => {
                 onChange={(event) => setTuneKey(event.target.value)}
                 required
               >
-                <option value=""></option>
-                <option value="C#">C#</option>
-                <option value="A#m">A#m</option>
-                <option value="F#">F#</option>
-                <option value="D#m">D#m</option>
-                <option value="B">B</option>
-                <option value="G#m">G#m</option>
-                <option value="E">E</option>
-                <option value="C#m">C#m</option>
-                <option value="A">A</option>
-                <option value="F#m">C#m</option>
-                <option value="D">D</option>
-                <option value="Bm">Bm</option>
-                <option value="G">G</option>
-                <option value="Em">Em</option>
-                <option value="C">C</option>
-                <option value="Am">Am</option>
-                <option value="F">F</option>
-                <option value="Dm">Dm</option>
-                <option value="Bb">Bb</option>
-                <option value="Gm">Gm</option>
-                <option value="Eb">Eb</option>
-                <option value="Cm">Cm</option>
-                <option value="Ab">Ab</option>
-                <option value="Fm">Fm</option>
-                <option value="Db">Db</option>
-                <option value="Bbm">Bbm</option>
-                <option value="Gb">Gb</option>
-                <option value="Ebm">Ebm</option>
-                <option value="Cb">Cb</option>
-                <option value="Abm">Abm</option>
-
-                <option value="Other">Other</option>
+                {TUNE_KEYS.map((key) => (
+                  <option key={key} value={key}>
+                    {key}
+                  </option>
+                ))}
               </Select>
             </div>
 

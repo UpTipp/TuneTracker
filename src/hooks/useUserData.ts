@@ -76,6 +76,7 @@ export const useUserData = (id: string) => {
             const processed = {
               tuneId: tune.tuneId,
               tuneName: tune.tuneName || "Unknown Tune",
+              tuneKey: tune.tuneKey,
               tuneType: tune.tuneType,
               orgUserId: tune.userId,
               author: tune.author,
