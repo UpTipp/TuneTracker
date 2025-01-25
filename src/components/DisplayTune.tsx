@@ -159,6 +159,7 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
             </div>
           </div>
         </div>
+        <div className="flex-grow"></div>
         <HR className="my-1" />
         <div className="flex justify-between pt-1">
           {userId === checkId ? (
