@@ -19,26 +19,25 @@ const customCard = {
   },
 };
 
+function checkCardClick(e: React.MouseEvent<HTMLElement>) {
+  const tagName = (e.target as HTMLElement).tagName.toLowerCase();
+  // Prevent modal if clicking on a link or button
+  return (
+    tagName !== "button" &&
+    tagName !== "a" &&
+    tagName !== "select" &&
+    (e.target as HTMLElement).closest(".non-clickable")
+  );
+}
+
 const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
   const checkId = JSON.parse(Cookie.get("user") || "{}").id;
   const [showModal, setShowModal] = useState(false);
 
-  const checkCardClick = (event) => {
-    if (
-      event.target.closest(".non-clickable") ||
-      event.target.tagName === "BUTTON" ||
-      event.target.tagName === "SPAN" ||
-      event.target.tagName === "A" ||
-      (event.target.tagName === "DIV" &&
-        event.target.className.includes("itemState")) ||
-      (event.target.tagName === "svg" &&
-        !event.target.classList.contains("arrow")) ||
-      (event.target.tagName === "path" &&
-        !event.target.closest("svg").classList.contains("arrow"))
-    ) {
-      return;
+  const handleCardClick = (e: React.MouseEvent<HTMLElement>) => {
+    if (checkCardClick(e)) {
+      setShowModal(true);
     }
-    setShowModal(true);
   };
 
   const linkClink = (type: string, id: string) => {
@@ -65,7 +64,7 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
   return (
     <>
       <Card
-        onClick={() => checkCardClick}
+        onClick={handleCardClick}
         theme={customCard}
         id={"tu:" + tune.tuneId}
         className="w-full max-w-lg border-2 hover:border-blue-400 flex flex-col justify-between"
@@ -79,7 +78,7 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
           userId={userId}
           dataFetch={dataFetch}
         />
-        <HR />
+        <HR className="my-1" />
         <div>
           {tune.tuneKey && tune.tuneKey !== "" ? (
             <p className="text-sm">Key: {tune.tuneKey}</p>
@@ -149,7 +148,6 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
             </div>
           </div>
         </div>
-        <div className="flex-grow"></div>
         <HR />
         <div className="flex justify-between pt-1">
           {userId === checkId ? (
@@ -265,7 +263,7 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
             </div>
           </div>
 
-          <HR />
+          <HR className="my-1" />
 
           <div>
             {tune.tuneKey && tune.tuneKey !== "" ? (
@@ -401,7 +399,6 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
                 </>
               )}
           </div>
-          <div className="flex-grow"></div>
           <HR />
           <div className="flex justify-between pt-1">
             {userId === checkId ? (

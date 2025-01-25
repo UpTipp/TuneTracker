@@ -23,7 +23,7 @@ const ItemHeader = ({
       <p className="basis-1/5 text-center text-sm text-gray-400 italic">
         {itemType}
       </p>
-      <div className="basis-4/5 flex justify-end">
+      <div className="basis-1/5 flex justify-end">
         <ItemState
           state={itemState}
           item={item}
