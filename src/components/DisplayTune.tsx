@@ -21,12 +21,23 @@ const customCard = {
 
 function checkCardClick(e: React.MouseEvent<HTMLElement>) {
   const tagName = (e.target as HTMLElement).tagName.toLowerCase();
+  const className = (e.target as HTMLElement).className;
+  const closest = (e.target as HTMLElement).closest(".non-clickable");
+  console.log("Checking: ", e.target);
+  console.log(
+    tagName !== "button" &&
+      tagName !== "a" &&
+      tagName !== "select" &&
+      !closest &&
+      !(tagName === "DIV" && className.includes("itemState"))
+  );
   // Prevent modal if clicking on a link or button
   return (
     tagName !== "button" &&
     tagName !== "a" &&
     tagName !== "select" &&
-    (e.target as HTMLElement).closest(".non-clickable")
+    !closest &&
+    !(tagName === "DIV" && className.includes("itemState"))
   );
 }
 
