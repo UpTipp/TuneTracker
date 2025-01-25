@@ -159,7 +159,7 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
             </div>
           </div>
         </div>
-        <HR />
+        <HR className="my-1" />
         <div className="flex justify-between pt-1">
           {userId === checkId ? (
             <>
@@ -254,11 +254,10 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
       </Card>
 
       <Modal show={showModal} onClose={() => setShowModal(false)}>
-        <Modal.Header>{tune.tuneName}</Modal.Header>
+        <Modal.Header className="mb-2 text-lg font-semibold text-cyan-600">
+          {tune.tuneName}
+        </Modal.Header>
         <Modal.Body>
-          <h5 className="mb-2 text-lg font-semibold text-cyan-600">
-            {tune.tuneName}
-          </h5>
           <div className="flex flex-row justify-between items-center">
             <p className="text-center text-sm text-gray-400 italic">
               {tune.state}
@@ -273,8 +272,6 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
               />
             </div>
           </div>
-
-          <HR className="my-1" />
 
           <div>
             {tune.tuneKey && tune.tuneKey !== "" ? (
@@ -348,7 +345,7 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
               <>
                 <div className="pt-1 pb-1">
                   <h6 className="text-md mb-1">Links:</h6>
-                  <div className="p-2 border border-gray-600 bg-gray-300 bg-opacity-50 rounded-md flex justify-normal flex-wrap non-clickable">
+                  <div className="p-2 border border-gray-600 bg-gray-300 bg-opacity-50 rounded-md justify-normal non-clickable">
                     {Array.isArray(tune.links) &&
                       tune.links.length > 0 &&
                       tune.links.map((link, index) => (
@@ -360,7 +357,6 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
                           >
                             {link}
                           </a>
-                          {index < tune.links.length - 1 && <p>, </p>}
                         </>
                       ))}
                   </div>
@@ -410,7 +406,7 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
                 </>
               )}
           </div>
-          <HR />
+          <HR className="my-1" />
           <div className="flex justify-between pt-1">
             {userId === checkId ? (
               <>
