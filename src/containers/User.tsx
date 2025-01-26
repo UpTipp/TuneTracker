@@ -9,6 +9,7 @@ import {
   Checkbox,
   TextInput,
   Accordion,
+  Pagination,
 } from "flowbite-react";
 import Cookies from "js-cookie";
 import Frame from "../components/Frame";
@@ -263,6 +264,7 @@ const User = () => {
   const userId = useRef("");
   const tabsRef = useRef<TabsRef>(null);
   const [activeTab, setActiveTab] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [itemMemory, setItemMemory] = useState([[]]);
   const [sortBy, setSortBy] = useState({
     tunes: "name",
@@ -377,27 +379,79 @@ const User = () => {
     });
   };
 
-  const goTo = (type: string, id: string) => {
+  function goTo(type: string, itemId: string) {
+    // Reset filters and sort
+    resetFilters("tunes");
+    resetFilters("sets");
+    resetFilters("sessions");
+    setSortBy(() => ({
+      tunes: "name",
+      sets: "name",
+      sessions: "name",
+    }));
+
     if (type === "tune") {
       tabsRef.current?.setActiveTab(0);
-      const elementId = "tu:" + id;
-      document.getElementById(elementId)?.scrollIntoView();
-      highlightElement(elementId);
-      updateUrl(type, id);
+      const elementId = "tu:" + itemId;
+      let index = searchItems(
+        filterItems(sortItems(tunes, "tunes"), "tunes"),
+        "tunes",
+        search.tunes
+      ).findIndex((item) => item.tuneId === itemId);
+
+      if (index !== -1) {
+        let paginationNumber = Math.floor(index / 21) + 1;
+        setTimeout(() => {
+          setCurrentPage(paginationNumber);
+        }, 250);
+        document
+          .getElementById(elementId)
+          ?.scrollIntoView({ behavior: "smooth" });
+        highlightElement(elementId);
+        updateUrl(type, itemId);
+      }
     } else if (type === "set") {
       tabsRef.current?.setActiveTab(1);
-      const elementId = "se:" + id;
-      document.getElementById(elementId)?.scrollIntoView();
-      highlightElement(elementId);
-      updateUrl(type, id);
+      const elementId = "se:" + itemId;
+      let index = searchItems(
+        filterItems(sortItems(sets, "sets"), "sets"),
+        "sets",
+        search.sets
+      ).findIndex((item) => item.setId === itemId);
+
+      if (index !== -1) {
+        let paginationNumber = Math.floor(index / 21) + 1;
+        setTimeout(() => {
+          setCurrentPage(paginationNumber);
+        }, 250);
+        document
+          .getElementById(elementId)
+          ?.scrollIntoView({ behavior: "smooth" });
+        highlightElement(elementId);
+        updateUrl(type, itemId);
+      }
     } else if (type === "session") {
       tabsRef.current?.setActiveTab(2);
-      const elementId = "sn:" + id;
-      document.getElementById(elementId)?.scrollIntoView();
-      highlightElement(elementId);
-      updateUrl(type, id);
+      const elementId = "sn:" + itemId;
+      let index = searchItems(
+        filterItems(sortItems(sessions, "sessions"), "sessions"),
+        "sessions",
+        search.sessions
+      ).findIndex((item) => item.sessionId === itemId);
+
+      if (index !== -1) {
+        let paginationNumber = Math.floor(index / 21) + 1;
+        setTimeout(() => {
+          setCurrentPage(paginationNumber);
+        }, 250);
+        document
+          .getElementById(elementId)
+          ?.scrollIntoView({ behavior: "smooth" });
+        highlightElement(elementId);
+        updateUrl(type, itemId);
+      }
     }
-  };
+  }
 
   const practiceOldest = (items: any[], type: string) => {
     // Get filtered items first
@@ -747,6 +801,13 @@ const User = () => {
     setItemMemory([]);
   };
 
+  const onPageChange = (page: number) => setCurrentPage(page);
+
+  function handleTabChange(newTab: number) {
+    setActiveTab(newTab);
+    setCurrentPage(1); // Reset pagination
+  }
+
   return (
     <Frame>
       <div className="pt-4 pb-4 pr-1 pl-1 md:pr-10 md:pl-10 lg:pr-20 lg:pl-20">
@@ -767,7 +828,7 @@ const User = () => {
           variant="fullWidth"
           ref={tabsRef}
           onActiveTabChange={(tab) => {
-            setActiveTab(tab);
+            handleTabChange(tab);
             const types = ["tune", "set", "session"];
             updateUrl(types[tab]);
           }}
@@ -960,16 +1021,41 @@ const User = () => {
                 filterItems(sortItems(tunes, "tunes"), "tunes"),
                 "tunes",
                 search.tunes
-              ).map((tune) => (
-                <DisplayTune
-                  tune={tune}
-                  userId={id}
-                  dataFetch={triggerDataFetch}
-                  goTo={goTo}
-                  itemMemory={updateItemMemory}
-                ></DisplayTune>
-              ))}
+              )
+                .slice((currentPage - 1) * 21, currentPage * 21)
+                .map((tune) => (
+                  <DisplayTune
+                    tune={tune}
+                    userId={id}
+                    dataFetch={triggerDataFetch}
+                    goTo={goTo}
+                    itemMemory={updateItemMemory}
+                  ></DisplayTune>
+                ))}
             </div>
+
+            {/* Pagination */}
+            {searchItems(
+              filterItems(sortItems(tunes, "tunes"), "tunes"),
+              "tunes",
+              search.tunes
+            ).length > 21 && (
+              <div className="flex overflow-x-auto sm:justify-center">
+                <Pagination
+                  layout="table"
+                  currentPage={currentPage}
+                  totalPages={Math.ceil(
+                    searchItems(
+                      filterItems(sortItems(tunes, "tunes"), "tunes"),
+                      "tunes",
+                      search.tunes
+                    ).length / 21
+                  )}
+                  onPageChange={onPageChange}
+                  showIcons
+                />
+              </div>
+            )}
           </Tabs.Item>
 
           {/* Sets */}
@@ -1135,16 +1221,41 @@ const User = () => {
                 filterItems(sortItems(sets, "sets"), "sets"),
                 "sets",
                 search.sets
-              ).map((set) => (
-                <DisplaySet
-                  set={set}
-                  userId={id}
-                  dataFetch={triggerDataFetch}
-                  goTo={goTo}
-                  itemMemory={updateItemMemory}
-                ></DisplaySet>
-              ))}
+              )
+                .slice((currentPage - 1) * 21, currentPage * 21)
+                .map((set) => (
+                  <DisplaySet
+                    set={set}
+                    userId={id}
+                    dataFetch={triggerDataFetch}
+                    goTo={goTo}
+                    itemMemory={updateItemMemory}
+                  ></DisplaySet>
+                ))}
             </div>
+
+            {/* Pagination */}
+            {searchItems(
+              filterItems(sortItems(sets, "sets"), "sets"),
+              "sets",
+              search.sets
+            ).length > 21 && (
+              <div className="flex overflow-x-auto sm:justify-center">
+                <Pagination
+                  layout="table"
+                  currentPage={currentPage}
+                  totalPages={Math.ceil(
+                    searchItems(
+                      filterItems(sortItems(sets, "sets"), "sets"),
+                      "sets",
+                      search.sets
+                    ).length / 21
+                  )}
+                  onPageChange={onPageChange}
+                  showIcons
+                />
+              </div>
+            )}
           </Tabs.Item>
 
           {/* Sessions */}
@@ -1311,16 +1422,41 @@ const User = () => {
                 filterItems(sortItems(sessions, "sessions"), "sessions"),
                 "sessions",
                 search.sessions
-              ).map((session) => (
-                <DisplaySession
-                  session={session}
-                  userId={id}
-                  dataFetch={triggerDataFetch}
-                  goTo={goTo}
-                  itemMemory={updateItemMemory}
-                ></DisplaySession>
-              ))}
+              )
+                .slice((currentPage - 1) * 21, currentPage * 21)
+                .map((session) => (
+                  <DisplaySession
+                    session={session}
+                    userId={id}
+                    dataFetch={triggerDataFetch}
+                    goTo={goTo}
+                    itemMemory={updateItemMemory}
+                  ></DisplaySession>
+                ))}
             </div>
+
+            {/* Pagination */}
+            {searchItems(
+              filterItems(sortItems(sessions, "sessions"), "sessions"),
+              "sessions",
+              search.sessions
+            ).length > 21 && (
+              <div className="flex overflow-x-auto sm:justify-center">
+                <Pagination
+                  layout="table"
+                  currentPage={currentPage}
+                  totalPages={Math.ceil(
+                    searchItems(
+                      filterItems(sortItems(sessions, "sessions"), "sessions"),
+                      "sessions",
+                      search.sessions
+                    ).length / 21
+                  )}
+                  onPageChange={onPageChange}
+                  showIcons
+                />
+              </div>
+            )}
           </Tabs.Item>
         </Tabs>
         {itemMemory.length > 1 && (

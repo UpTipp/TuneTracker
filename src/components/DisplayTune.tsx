@@ -254,14 +254,19 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
         </div>
       </Card>
 
-      <Modal show={showModal} onClose={() => setShowModal(false)}>
+      <Modal
+        dismissible
+        size={"lg"}
+        show={showModal}
+        onClose={() => setShowModal(false)}
+      >
         <Modal.Header className="mb-2 text-lg font-semibold text-cyan-600">
           {tune.tuneName}
         </Modal.Header>
         <Modal.Body>
           <div className="flex flex-row justify-between items-center">
             <p className="text-center text-sm text-gray-400 italic">
-              {tune.state}
+              {tune.tuneType}
             </p>
             <div className="flex justify-end">
               <ItemState
@@ -351,13 +356,15 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
                       tune.links.length > 0 &&
                       tune.links.map((link, index) => (
                         <>
-                          <a
-                            key={index}
-                            href={link}
-                            className="text-blue-600 text-sm w-min underline decoration-inherit"
-                          >
-                            {link}
-                          </a>
+                          <div>
+                            <a
+                              key={index}
+                              href={link}
+                              className="text-blue-600 text-sm w-min underline decoration-inherit"
+                            >
+                              {link}
+                            </a>
+                          </div>
                         </>
                       ))}
                   </div>
@@ -419,8 +426,11 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
                       userId={userId}
                       dataFetch={dataFetch}
                     />
-                    <div className="flex justify-center items-center">
-                      <IoIosArrowDroprightCircle className="arrow opacity-60" />
+                    <div
+                      className="flex justify-center items-center"
+                      onClick={() => setShowModal(false)}
+                    >
+                      <IoIosArrowDropleftCircle className="arrow opacity-60" />
                     </div>
                     <div className="non-clickable">
                       <UpdateTune
@@ -435,7 +445,10 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
                   <>
                     <CopyItem />
                     <div className="flex justify-center items-center">
-                      <IoIosArrowDroprightCircle className="arrow opacity-60" />
+                      <IoIosArrowDropleftCircle
+                        className="arrow opacity-60"
+                        onClick={() => setShowModal(false)}
+                      />
                     </div>
                     <UpdatePractice
                       type={"tune"}
@@ -452,7 +465,10 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
                   <>
                     <CopyItem />
                     <div className="flex justify-center items-center">
-                      <IoIosArrowDroprightCircle className="arrow opacity-60" />
+                      <IoIosArrowDropleftCircle
+                        className="arrow opacity-60"
+                        onClick={() => setShowModal(false)}
+                      />
                     </div>
                     <AddItem />
                   </>
@@ -465,7 +481,10 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
                       Copy
                     </Button>
                     <div className="flex justify-center items-center">
-                      <IoIosArrowDropleftCircle className="arrow opacity-60" />
+                      <IoIosArrowDropleftCircle
+                        className="arrow opacity-60"
+                        onClick={() => setShowModal(false)}
+                      />
                     </div>
                     <Button className="bg-blue-400" disabled>
                       Add Tune
