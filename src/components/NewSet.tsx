@@ -243,6 +243,14 @@ const NewSet = ({ dataFetch, userTunes, goTo }) => {
               setFileURLs={setFileURLs}
             />
 
+            <NewTune
+              dataFetch={dataFetch}
+              goTo={goTo}
+              onTuneCreated={(tune) => {
+                handleTuneCreated(tune);
+              }}
+            />
+
             <SearchDropdown
               label="Search Tunes"
               searchValue={tuneSearch}
@@ -295,13 +303,6 @@ const NewSet = ({ dataFetch, userTunes, goTo }) => {
           </div>
         </Modal.Body>
       </Modal>
-      <NewTune
-        dataFetch={dataFetch}
-        goTo={goTo}
-        onTuneCreated={(tune) => {
-          handleTuneCreated(tune);
-        }}
-      />
     </>
   );
 };
