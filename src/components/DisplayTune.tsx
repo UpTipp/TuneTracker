@@ -89,7 +89,6 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
           userId={userId}
           dataFetch={dataFetch}
         />
-        <HR className="my-1" />
         <div>
           {tune.tuneKey && tune.tuneKey !== "" ? (
             <p className="text-sm">Key: {tune.tuneKey}</p>
@@ -159,98 +158,99 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
             </div>
           </div>
         </div>
-        <div className="flex-grow"></div>
-        <HR className="my-1" />
-        <div className="flex justify-between pt-1">
-          {userId === checkId ? (
-            <>
-              {userId === tune.orgUserId ? (
-                <>
-                  <UpdatePractice
-                    type={"tune"}
-                    id={tune.tuneId}
-                    userId={userId}
-                    dataFetch={dataFetch}
-                  />
-                  {hasBackContent ? (
-                    <div className="flex justify-center items-center">
-                      <IoIosArrowDroprightCircle className="arrow opacity-60" />
-                    </div>
-                  ) : (
-                    <div className="flex justify-center items-center">
-                      <IoIosArrowDroprightCircle className="arrow opacity-0" />
-                    </div>
-                  )}
-                  <div className="non-clickable">
-                    <UpdateTune
+        <div>
+          <HR className="my-1" />
+          <div className="flex justify-between pt-1">
+            {userId === checkId ? (
+              <>
+                {userId === tune.orgUserId ? (
+                  <>
+                    <UpdatePractice
                       type={"tune"}
-                      itemId={tune.tuneId}
-                      tune={tune}
+                      id={tune.tuneId}
+                      userId={userId}
                       dataFetch={dataFetch}
                     />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <CopyItem />
-                  {hasBackContent ? (
-                    <div className="flex justify-center items-center">
-                      <IoIosArrowDroprightCircle className="arrow opacity-60" />
+                    {hasBackContent ? (
+                      <div className="flex justify-center items-center">
+                        <IoIosArrowDroprightCircle className="arrow opacity-60" />
+                      </div>
+                    ) : (
+                      <div className="flex justify-center items-center">
+                        <IoIosArrowDroprightCircle className="arrow opacity-0" />
+                      </div>
+                    )}
+                    <div className="non-clickable">
+                      <UpdateTune
+                        type={"tune"}
+                        itemId={tune.tuneId}
+                        tune={tune}
+                        dataFetch={dataFetch}
+                      />
                     </div>
-                  ) : (
-                    <div className="flex justify-center items-center">
-                      <IoIosArrowDroprightCircle className="arrow opacity-0" />
-                    </div>
-                  )}
-                  <UpdatePractice
-                    type={"tune"}
-                    id={tune.tuneId}
-                    userId={userId}
-                    dataFetch={dataFetch}
-                  />
-                </>
-              )}
-            </>
-          ) : (
-            <>
-              {userId && checkId ? (
-                <>
-                  <CopyItem />
-                  {hasBackContent ? (
-                    <div className="flex justify-center items-center">
-                      <IoIosArrowDroprightCircle className="arrow opacity-60" />
-                    </div>
-                  ) : (
-                    <div className="flex justify-center items-center">
-                      <IoIosArrowDroprightCircle className="arrow opacity-0" />
-                    </div>
-                  )}
-                  <AddItem />
-                </>
-              ) : (
-                <>
-                  <Button
-                    className="bg-green-500 hover:enabled:bg-green-700"
-                    disabled
-                  >
-                    Copy
-                  </Button>
-                  {hasBackContent ? (
-                    <div className="flex justify-center items-center">
-                      <IoIosArrowDroprightCircle className="arrow opacity-60" />
-                    </div>
-                  ) : (
-                    <div className="flex justify-center items-center">
-                      <IoIosArrowDroprightCircle className="arrow opacity-0" />
-                    </div>
-                  )}
-                  <Button className="bg-blue-400" disabled>
-                    Add Tune
-                  </Button>
-                </>
-              )}
-            </>
-          )}
+                  </>
+                ) : (
+                  <>
+                    <CopyItem />
+                    {hasBackContent ? (
+                      <div className="flex justify-center items-center">
+                        <IoIosArrowDroprightCircle className="arrow opacity-60" />
+                      </div>
+                    ) : (
+                      <div className="flex justify-center items-center">
+                        <IoIosArrowDroprightCircle className="arrow opacity-0" />
+                      </div>
+                    )}
+                    <UpdatePractice
+                      type={"tune"}
+                      id={tune.tuneId}
+                      userId={userId}
+                      dataFetch={dataFetch}
+                    />
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                {userId && checkId ? (
+                  <>
+                    <CopyItem />
+                    {hasBackContent ? (
+                      <div className="flex justify-center items-center">
+                        <IoIosArrowDroprightCircle className="arrow opacity-60" />
+                      </div>
+                    ) : (
+                      <div className="flex justify-center items-center">
+                        <IoIosArrowDroprightCircle className="arrow opacity-0" />
+                      </div>
+                    )}
+                    <AddItem />
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      className="bg-green-500 hover:enabled:bg-green-700"
+                      disabled
+                    >
+                      Copy
+                    </Button>
+                    {hasBackContent ? (
+                      <div className="flex justify-center items-center">
+                        <IoIosArrowDroprightCircle className="arrow opacity-60" />
+                      </div>
+                    ) : (
+                      <div className="flex justify-center items-center">
+                        <IoIosArrowDroprightCircle className="arrow opacity-0" />
+                      </div>
+                    )}
+                    <Button className="bg-blue-400" disabled>
+                      Add Tune
+                    </Button>
+                  </>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </Card>
 
@@ -414,7 +414,7 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
                 </>
               )}
           </div>
-          <HR className="my-1" />
+          <HR className="my-1 mt-3" />
           <div className="flex justify-between pt-1">
             {userId === checkId ? (
               <>

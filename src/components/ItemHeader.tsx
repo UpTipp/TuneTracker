@@ -1,3 +1,4 @@
+import { HR } from "flowbite-react";
 import ItemState from "./ItemState";
 
 const ItemHeader = ({
@@ -24,9 +25,7 @@ const ItemHeader = ({
           )}
         </div>
         <div className="flex flex-row justify-between items-center">
-          <p className="basis-1/2 text-center text-md text-gray-400 italic">
-            {itemType}
-          </p>
+          <p className="basis-1/2 text-md text-gray-400 italic">{itemType}</p>
           <div className="basis-1/2 flex justify-end non-clickable">
             <ItemState
               state={itemState}
@@ -37,6 +36,7 @@ const ItemHeader = ({
             />
           </div>
         </div>
+        <HR className="my-1" />
       </div>
     </>
   );

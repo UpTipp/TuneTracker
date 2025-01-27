@@ -11,7 +11,17 @@ import LinksSection from "./LinksSection";
 import MediaInputs from "./MediaInputs";
 import { TUNE_TYPES, TUNE_KEYS } from "../shared/TuneOptions";
 
-const NewTune = ({ dataFetch, goTo }) => {
+interface NewTuneProps {
+  onTuneCreated?: (tune: any) => void;
+  dataFetch: () => void;
+  goTo: (page: string, id: string) => void;
+}
+
+const NewTune = ({
+  onTuneCreated = () => {},
+  dataFetch,
+  goTo,
+}: NewTuneProps) => {
   const [openModal, setOpenModal] = useState(false);
 
   // Inputs
@@ -88,10 +98,14 @@ const NewTune = ({ dataFetch, goTo }) => {
       setOpenModal(false);
       onCloseModal();
 
-      let tuneId = result.tuneId;
-      setTimeout(() => {
-        goTo("tune", tuneId);
-      }, 1000);
+      if (onTuneCreated === undefined) {
+        let tuneId = result.tuneId;
+        setTimeout(() => {
+          goTo("tune", tuneId);
+        }, 1000);
+      } else {
+        onTuneCreated(result);
+      }
     } catch (error) {
       console.error("Error:", error);
       // You might want to show an error message to the user here

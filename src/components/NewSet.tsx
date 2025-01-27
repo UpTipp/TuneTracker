@@ -7,6 +7,7 @@ import SearchDropdown from "./SearchDropdown";
 import DraggableList from "./DraggableList";
 import LinksSection from "./LinksSection";
 import MediaInputs from "./MediaInputs";
+import NewTune from "./NewTune";
 
 const SortableItem = ({ tune, onRemove }) => {
   const { attributes, listeners, setNodeRef, transform, transition } =
@@ -48,6 +49,7 @@ const SortableItem = ({ tune, onRemove }) => {
 
 const NewSet = ({ dataFetch, userTunes, goTo }) => {
   const [openModal, setOpenModal] = useState(false);
+  const [selectedTunes, setSelectedTunes] = useState([]);
 
   // Inputs
   const [setName, setSetName] = useState("");
@@ -192,10 +194,9 @@ const NewSet = ({ dataFetch, userTunes, goTo }) => {
     return setName.trim() !== "" && tunes.length >= 2;
   };
 
-  const handleRecordingComplete = (file: File, url: string) => {
-    setFiles((prevFiles) => [...prevFiles, file]);
-    setFileURLs((prevURLs) => [...prevURLs, url]);
-  };
+  function handleTuneCreated(newTune) {
+    setSelectedTunes((prev) => [...prev, newTune]);
+  }
 
   return (
     <>
@@ -294,6 +295,13 @@ const NewSet = ({ dataFetch, userTunes, goTo }) => {
           </div>
         </Modal.Body>
       </Modal>
+      <NewTune
+        dataFetch={dataFetch}
+        goTo={goTo}
+        onTuneCreated={(tune) => {
+          handleTuneCreated(tune);
+        }}
+      />
     </>
   );
 };
