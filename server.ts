@@ -300,6 +300,7 @@ async function convertToMp3(
   return new Promise<void>((resolve, reject) => {
     ffmpeg(inputFile)
       .audioCodec("libmp3lame")
+      .audioBitrate("128k") // Lower bitrate to reduce conversion time
       .format("mp3")
       .on("error", (err) => {
         console.error("Error converting audio:", err);
@@ -1230,7 +1231,7 @@ app.put(
         if (command === "delete") {
           // Delete the file
           console.log(`Deleting file: ${existingFile}`);
-          let path = existingFile.split("/").slice(-2).join("/");
+          let path = existingFile.split("/").slice(-3).join("/");
           console.log("Path:", path);
           await minioClient.removeObject("audio-files", path);
         } else if (command === "keep") {
