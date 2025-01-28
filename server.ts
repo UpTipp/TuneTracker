@@ -897,7 +897,7 @@ app.put(
         if (command === "delete") {
           // Delete the file
           console.log(`Deleting file: ${existingFile}`);
-          let path = existingFile.split("/").slice(-2).join("/");
+          let path = existingFile.split("/").slice(-3).join("/");
           console.log("Path:", path);
           await minioClient.removeObject("audio-files", path);
         } else if (command === "keep") {
@@ -1088,7 +1088,7 @@ app.put(
         if (command === "delete") {
           // Delete the file
           console.log(`Deleting file: ${existingFile}`);
-          let path = existingFile.split("/").slice(-2).join("/");
+          let path = existingFile.split("/").slice(-3).join("/");
           console.log("Path:", path);
           await minioClient.removeObject("audio-files", path);
         } else if (command === "keep") {
