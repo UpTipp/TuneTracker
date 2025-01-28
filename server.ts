@@ -292,6 +292,24 @@ const initializeMinio = async () => {
 
 initializeMinio().catch(console.error);
 
+async function convertToMp3(
+  file: Express.Multer.File,
+  inputFile: string,
+  outputFile: string
+): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    ffmpeg(inputFile)
+      .audioCodec("libmp3lame")
+      .format("mp3")
+      .on("error", (err) => {
+        console.error("Error converting audio:", err);
+        reject(err);
+      })
+      .on("end", () => resolve())
+      .save(outputFile);
+  });
+}
+
 // Modify the file upload middleware to use Minio and convert to MP3
 const uploadToMinio = async (file: Express.Multer.File, path: string) => {
   const inputFile = `/tmp/${Date.now()}-${file.originalname}`;
@@ -300,43 +318,38 @@ const uploadToMinio = async (file: Express.Multer.File, path: string) => {
   // Write the uploaded file to a temp directory
   fs.writeFileSync(inputFile, new Uint8Array(file.buffer));
 
-  return new Promise<string>((resolve, reject) => {
-    ffmpeg(inputFile)
-      .audioCodec("libmp3lame")
-      .format("mp3")
-      .on("error", (err) => {
-        console.error("Error converting audio:", err);
-        fs.unlinkSync(inputFile);
-        reject(err);
-      })
-      .on("end", async () => {
-        const mp3Buffer = fs.readFileSync(outputFile);
-        const metaData = {
-          "Content-Type": "audio/mpeg",
-          "Content-Disposition": `inline; filename="${file.originalname}"`,
-          "Cache-Control": "no-cache",
-        };
+  try {
+    await convertToMp3(file, inputFile, outputFile);
 
-        console.log("Uploading to Minio:", path);
+    const mp3Buffer = fs.readFileSync(outputFile);
+    const metaData = {
+      "Content-Type": "audio/mpeg",
+      "Content-Disposition": `inline; filename="${path.slice(
+        path.lastIndexOf("/") + 1
+      )}"`,
+      "Cache-Control": "no-cache",
+    };
 
-        await minioClient.putObject(
-          "audio-files",
-          path,
-          mp3Buffer,
-          mp3Buffer.length,
-          metaData
-        );
+    console.log("Uploading to Minio:", path);
 
-        // Clean up temporary files
-        fs.unlinkSync(inputFile);
-        fs.unlinkSync(outputFile);
+    await minioClient.putObject(
+      "audio-files",
+      path,
+      mp3Buffer,
+      mp3Buffer.length,
+      metaData
+    );
 
-        // Generate the URL for the uploaded file
-        const fileUrl = `${process.env.MAIN_DOMAIN}/audio/${path}`;
-        resolve(fileUrl);
-      })
-      .save(outputFile);
-  });
+    // Generate the URL for the uploaded file
+    const fileUrl = `${process.env.MAIN_DOMAIN}/audio/${path}`;
+    return fileUrl;
+  } catch (error) {
+    console.error("Error uploading to MinIO:", error);
+    throw error;
+  } finally {
+    fs.unlinkSync(inputFile);
+    fs.unlinkSync(outputFile);
+  }
 };
 
 const upload = multer({ storage: multer.memoryStorage() });
