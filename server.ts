@@ -300,6 +300,9 @@ const uploadToMinio = async (file: Express.Multer.File, path: string) => {
           "Content-Disposition": `inline; filename="${file.originalname}"`,
           "Cache-Control": "no-cache",
         };
+
+        console.log("Uploading to Minio:", path);
+
         await minioClient.putObject(
           "audio-files",
           path,
