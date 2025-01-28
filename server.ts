@@ -268,9 +268,25 @@ const minioClient = new Client({
 // Create bucket if it doesn't exist
 const initializeMinio = async () => {
   const bucketName = "audio-files";
-  const exists = await minioClient.bucketExists(bucketName);
-  if (!exists) {
-    await minioClient.makeBucket(bucketName);
+  console.log("MinIO endpoint:", process.env.MINIO_ENDPOINT);
+  console.log("MinIO port:", process.env.MINIO_PORT);
+
+  console.log("Attempting to connect to MinIO and list buckets...");
+  try {
+    const buckets = await minioClient.listBuckets();
+    console.log("Connected to MinIO. Buckets:", buckets);
+
+    const exists = await minioClient.bucketExists(bucketName);
+    if (!exists) {
+      console.log(`Bucket "${bucketName}" not found. Creating...`);
+      await minioClient.makeBucket(bucketName);
+      console.log(`Bucket "${bucketName}" created.`);
+    } else {
+      console.log(`Bucket "${bucketName}" already exists.`);
+    }
+    console.log("MinIO initialization complete with required permissions.");
+  } catch (error) {
+    console.error("Error initializing MinIO:", error);
   }
 };
 
