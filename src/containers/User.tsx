@@ -144,6 +144,13 @@ const FilterButtons = ({
   resetFilters: (type: string) => void;
   showDropdown?: boolean;
 }) => {
+  const timeframeAll =
+    type === "tunes"
+      ? filterBy.tunes.timeframe.all
+      : type === "sets"
+      ? filterBy.sets.timeframe.all
+      : filterBy.sessions.all; // for sessions
+
   const content = (
     <>
       <Dropdown label="Sort By">
@@ -181,18 +188,14 @@ const FilterButtons = ({
         <div className="max-h-96 overflow-y-auto">
           <FilterCheckbox
             label="All Time"
-            checked={
-              type === "tunes"
-                ? filterBy.tunes.timeframe.all
-                : filterBy[type].timeframe.all
-            }
+            checked={timeframeAll}
             onChange={handleCheckboxClick(type, "timeframe", "all")}
           />
           <FilterCheckbox
             label="Last Week"
             checked={
-              type === "tunes"
-                ? filterBy.tunes.timeframe.week
+              type === "sessions"
+                ? filterBy.sessions.week
                 : filterBy[type].timeframe.week
             }
             onChange={handleCheckboxClick(type, "timeframe", "week")}
@@ -200,8 +203,8 @@ const FilterButtons = ({
           <FilterCheckbox
             label="Last Month"
             checked={
-              type === "tunes"
-                ? filterBy.tunes.timeframe.month
+              type === "sessions"
+                ? filterBy.sessions.month
                 : filterBy[type].timeframe.month
             }
             onChange={handleCheckboxClick(type, "timeframe", "month")}
@@ -209,8 +212,8 @@ const FilterButtons = ({
           <FilterCheckbox
             label="Unpracticed"
             checked={
-              type === "tunes"
-                ? filterBy.tunes.timeframe.unpracticed
+              type === "sessions"
+                ? filterBy.sessions.unpracticed
                 : filterBy[type].timeframe.unpracticed
             }
             onChange={handleCheckboxClick(type, "timeframe", "unpracticed")}
