@@ -196,20 +196,22 @@ const NewTune = ({
                   </p>
                 )}
               </div>
-              <Dropdown label="Select Keys" placement="bottom">
-                <div className="max-h-48 overflow-y-auto">
-                  {TUNE_KEYS.map((keyOption) => (
-                    <Dropdown.Item key={keyOption}>
-                      <Checkbox
-                        checked={tuneKey.includes(keyOption)}
-                        onChange={() => handleKeyChange(keyOption)}
-                        id={keyOption}
-                      >
-                        {keyOption}
-                      </Checkbox>
-                    </Dropdown.Item>
-                  ))}
-                </div>
+              <Dropdown
+                label="Select Keys"
+                placement="bottom"
+                className="max-h-48 overflow-y-auto"
+              >
+                {TUNE_KEYS.map((keyOption) => (
+                  <Dropdown.Item key={keyOption}>
+                    <Checkbox
+                      checked={tuneKey.includes(keyOption)}
+                      onChange={() => handleKeyChange(keyOption)}
+                      id={keyOption}
+                    >
+                      {keyOption}
+                    </Checkbox>
+                  </Dropdown.Item>
+                ))}
               </Dropdown>
             </div>
 
