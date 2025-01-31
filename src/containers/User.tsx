@@ -184,52 +184,36 @@ const FilterButtons = ({
             checked={
               type === "tunes"
                 ? filterBy.tunes.timeframe.all
-                : filterBy[type].all
+                : filterBy[type].timeframe.all
             }
-            onChange={handleCheckboxClick(
-              type,
-              type === "tunes" ? "timeframe" : null,
-              "all"
-            )}
+            onChange={handleCheckboxClick(type, "timeframe", "all")}
           />
           <FilterCheckbox
             label="Last Week"
             checked={
               type === "tunes"
                 ? filterBy.tunes.timeframe.week
-                : filterBy[type].week
+                : filterBy[type].timeframe.week
             }
-            onChange={handleCheckboxClick(
-              type,
-              type === "tunes" ? "timeframe" : null,
-              "week"
-            )}
+            onChange={handleCheckboxClick(type, "timeframe", "week")}
           />
           <FilterCheckbox
             label="Last Month"
             checked={
               type === "tunes"
                 ? filterBy.tunes.timeframe.month
-                : filterBy[type].month
+                : filterBy[type].timeframe.month
             }
-            onChange={handleCheckboxClick(
-              type,
-              type === "tunes" ? "timeframe" : null,
-              "month"
-            )}
+            onChange={handleCheckboxClick(type, "timeframe", "month")}
           />
           <FilterCheckbox
             label="Unpracticed"
             checked={
               type === "tunes"
                 ? filterBy.tunes.timeframe.unpracticed
-                : filterBy[type].unpracticed
+                : filterBy[type].timeframe.unpracticed
             }
-            onChange={handleCheckboxClick(
-              type,
-              type === "tunes" ? "timeframe" : null,
-              "unpracticed"
-            )}
+            onChange={handleCheckboxClick(type, "timeframe", "unpracticed")}
           />
 
           {type === "tunes" && (
@@ -671,7 +655,11 @@ const User = () => {
       const filter = filterBy.sets;
 
       // If "all" is selected for both timeframe and type, return all items
-      if (filter.timeframe.all && filter.type.all) return items;
+
+      if (filter.timeframe.all && filter.type.all) {
+        console.log("All selected");
+        return items;
+      }
 
       return items.filter((set) => {
         // Check timeframe
@@ -966,12 +954,6 @@ const User = () => {
   const filteredSets = sets.filter(
     (set) => !selectedTuneType || set.tuneTypes?.includes(selectedTuneType)
   );
-
-  function filterSetsByTuneType(sets: any[], typeFilter: TuneTypeFilter) {
-    return sets.filter((set) =>
-      set.tuneTypes.some((type: string) => typeFilter[type])
-    );
-  }
 
   return (
     <Frame>
@@ -1426,13 +1408,7 @@ const User = () => {
             <HR className="my-4" />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 justify-center">
               {searchItems(
-                filterItems(
-                  sortItems(
-                    filterSetsByTuneType(filteredSets, filterBy.tunes.type),
-                    "sets"
-                  ),
-                  "sets"
-                ),
+                filterItems(sortItems(filteredSets, "sets"), "sets"),
                 "sets",
                 search.sets
               )
@@ -1450,13 +1426,7 @@ const User = () => {
 
             {/* Pagination */}
             {searchItems(
-              filterItems(
-                sortItems(
-                  filterSetsByTuneType(filteredSets, filterBy.tunes.type),
-                  "sets"
-                ),
-                "sets"
-              ),
+              filterItems(sortItems(filteredSets, "sets"), "sets"),
               "sets",
               search.sets
             ).length > 21 && (
@@ -1466,16 +1436,7 @@ const User = () => {
                   currentPage={currentPage}
                   totalPages={Math.ceil(
                     searchItems(
-                      filterItems(
-                        sortItems(
-                          filterSetsByTuneType(
-                            filteredSets,
-                            filterBy.tunes.type
-                          ),
-                          "sets"
-                        ),
-                        "sets"
-                      ),
+                      filterItems(sortItems(filteredSets, "sets"), "sets"),
                       "sets",
                       search.sets
                     ).length / 21
