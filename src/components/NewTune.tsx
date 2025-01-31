@@ -199,7 +199,7 @@ const NewTune = ({
               <Dropdown
                 label="Select Keys"
                 placement="bottom"
-                className="max-h-48 overflow-y-auto"
+                dismissOnClick={false}
               >
                 {TUNE_KEYS.map((keyOption) => (
                   <Dropdown.Item key={keyOption}>
