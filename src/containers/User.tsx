@@ -729,11 +729,16 @@ const User = () => {
     });
   };
 
-  const handleFilterChange = (
+  function handleFilterChange(
     type: string,
     category: string | null,
     value: string
-  ) => {
+  ) {
+    // Map singular to plural
+    if (type === "tune") type = "tunes";
+    if (type === "set") type = "sets";
+    if (type === "session") type = "sessions";
+
     setFilterBy((prev: FilterState) => {
       if (type === "tunes" || type === "sets") {
         if (!category) return prev;
@@ -816,7 +821,7 @@ const User = () => {
         };
       }
     });
-  };
+  }
 
   const handleCheckboxClick = (
     type: string,
@@ -894,7 +899,12 @@ const User = () => {
       } else {
         return {
           ...prev,
-          [type]: { all: true, week: false, month: false, unpracticed: false },
+          sessions: {
+            all: true,
+            week: false,
+            month: false,
+            unpracticed: false,
+          },
         };
       }
     });
