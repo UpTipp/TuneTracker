@@ -194,11 +194,12 @@ const UpdateTune = ({ type, itemId, tune, dataFetch }) => {
                       Keys: None
                     </p>
                   ))}
-                {tuneKey.length > 0 && tuneKey.length < 12 ? (
+                {tuneKey.length > 0 && tuneKey.length < 12 && (
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     Keys: {tuneKey.join(", ")}
                   </p>
-                ) : (
+                )}
+                {tuneKey.length >= 12 && (
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     Keys: {tuneKey.slice(0, 12).join(", ") + "..."}
                   </p>
