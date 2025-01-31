@@ -626,6 +626,7 @@ const User = () => {
   };
 
   const filterItems = (items: any[], type: string) => {
+    console.log(`Filtering ${type} items...`);
     if (type === "tunes") {
       const filter = filterBy.tunes;
 
@@ -663,6 +664,10 @@ const User = () => {
           Object.entries(filter.type)
             .filter(([key, value]) => key !== "all" && value)
             .some(([key]) => item.tuneType?.toLowerCase() === key);
+
+        console.log(
+          `Tune ${item.tuneName} - Timeframe Match: ${timeframeMatch}, Type Match: ${typeMatch}`
+        );
         return timeframeMatch && typeMatch;
       });
     }
@@ -690,9 +695,12 @@ const User = () => {
         if (!set.tuneTypes) return false;
 
         const lowerSetTypes = set.tuneTypes.map((t) => t.toLowerCase());
-        return Object.entries(filter.type)
+        const typeMatch = Object.entries(filter.type)
           .filter(([k, v]) => k !== "all" && v)
           .some(([k]) => lowerSetTypes.includes(k));
+
+        console.log(`Set ${set.setName} - Type Match: ${typeMatch}`);
+        return typeMatch;
       });
 
       return typedSets;
