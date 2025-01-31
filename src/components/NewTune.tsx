@@ -203,13 +203,13 @@ const NewTune = ({
               >
                 {TUNE_KEYS.map((keyOption) => (
                   <Dropdown.Item key={keyOption}>
-                    <Checkbox
-                      checked={tuneKey.includes(keyOption)}
-                      onChange={() => handleKeyChange(keyOption)}
-                      id={keyOption}
-                    >
-                      {keyOption}
-                    </Checkbox>
+                    <div onClick={() => handleKeyChange(keyOption)}>
+                      <Checkbox
+                        id={keyOption}
+                        checked={tuneKey.includes(keyOption)}
+                      />
+                      <Label htmlFor={keyOption} value={keyOption} />
+                    </div>
                   </Dropdown.Item>
                 ))}
               </Dropdown>
