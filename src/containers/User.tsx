@@ -670,45 +670,32 @@ const User = () => {
     // For sets and sessions
     if (type === "sets") {
       const filter = filterBy.sets;
+      const timeframeFilteredSets = items.filter((item) => {
+        const now = new Date();
+        const lastPractice = new Date(item.lastPractice);
+        const diffDays = Math.floor(
+          (now.getTime() - lastPractice.getTime()) / (1000 * 60 * 60 * 24)
+        );
 
-      // If "all" is selected for both timeframe and type, return all items
-      if (filter.all && filter.type.all) return items;
+        if (filter.all) return true;
+        if (filter.week && diffDays <= 7) return true;
+        if (filter.month && diffDays <= 30) return true;
+        if (filter.unpracticed && !item.lastPractice) return true;
 
-      return items.filter((item) => {
-        // Check timeframe
-        const timeframeMatch =
-          filter.all ||
-          Object.entries(filter)
-            .filter(([key, value]) => key !== "all" && key !== "type" && value)
-            .some(([key]) => {
-              const now = new Date();
-              const lastPractice = new Date(item.lastPractice);
-              const diffDays = Math.floor(
-                (now.getTime() - lastPractice.getTime()) / (1000 * 60 * 60 * 24)
-              );
-
-              switch (key) {
-                case "week":
-                  return diffDays <= 7;
-                case "month":
-                  return diffDays <= 30;
-                case "unpracticed":
-                  return !item.lastPractice;
-                default:
-                  return false;
-              }
-            });
-
-        // Check type
-        const typeMatch =
-          filter.type.all ||
-          Object.entries(filter.type)
-            .filter(([key, value]) => key !== "all" && value)
-            .some(([key]) =>
-              item.tuneTypes?.map((t: string) => t.toLowerCase()).includes(key)
-            );
-        return timeframeMatch && typeMatch;
+        return false;
       });
+
+      const typedSets = timeframeFilteredSets.filter((set) => {
+        if (filter.type.all) return true;
+        if (!set.tuneTypes) return false;
+
+        const lowerSetTypes = set.tuneTypes.map((t) => t.toLowerCase());
+        return Object.entries(filter.type)
+          .filter(([k, v]) => k !== "all" && v)
+          .some(([k]) => lowerSetTypes.includes(k));
+      });
+
+      return typedSets;
     }
 
     const filter = filterBy[type as keyof typeof filterBy] as TimeframeFilter;

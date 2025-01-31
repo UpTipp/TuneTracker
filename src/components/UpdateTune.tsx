@@ -212,13 +212,17 @@ const UpdateTune = ({ type, itemId, tune, dataFetch }) => {
                 className="max-h-48 overflow-y-auto"
               >
                 {TUNE_KEYS.map((keyOption) => (
-                  <Dropdown.Item key={keyOption}>
-                    <div onClick={() => handleKeyChange(keyOption)}>
+                  <Dropdown.Item key={keyOption} className="w-full">
+                    <div
+                      className="flex gap-2 w-full items-center"
+                      onClick={() => handleKeyChange(keyOption)}
+                    >
                       <Checkbox
                         id={keyOption}
                         checked={tuneKey.includes(keyOption)}
+                        onClick={(e) => e.stopPropagation()}
                       />
-                      <Label htmlFor={keyOption} value={keyOption} />
+                      <p className="text-slate-800 text-base ">{keyOption}</p>
                     </div>
                   </Dropdown.Item>
                 ))}
