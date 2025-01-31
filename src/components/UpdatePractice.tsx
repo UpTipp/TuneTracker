@@ -18,7 +18,7 @@ const UpdatePractice = ({ type, id, userId, dataFetch }) => {
 
   return (
     <Button
-      className="bg-green-500 hover:enabled:bg-green-700"
+      className="bg-green-500 hover:enabled:bg-green-700 non-clickable"
       onClick={handlePracticeNow}
     >
       Practice Now

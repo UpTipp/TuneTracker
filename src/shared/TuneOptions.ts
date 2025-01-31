@@ -12,7 +12,7 @@ export const TUNE_TYPES = [
   "Clog",
   "Air",
   "Slow Air",
-  "Strathspeys",
+  "Strathspey",
   "Other",
 ];
 

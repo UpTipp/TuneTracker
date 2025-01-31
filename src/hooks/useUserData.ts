@@ -83,6 +83,7 @@ export const useUserData = (id: string) => {
               links: tune.links,
               creatorComments: tune.comments,
               recordingRef: tune.recordingRef,
+              dateAdded: tune.dateAdded,
               // These will be populated by sets and sessions
               setIds: [],
               setNames: [],
@@ -140,6 +141,7 @@ export const useUserData = (id: string) => {
               tuneIds,
               tuneNames,
               sessionIds: [],
+              dateAdded: set.dateAdded,
             };
             return mergeWithState(processed, userData.setStates, "setId");
           });
@@ -159,6 +161,18 @@ export const useUserData = (id: string) => {
             };
           });
           console.log("✨ Updated tunes with set references:", updatedTunes);
+
+          // Gather unique tuneTypes for each set
+          processedSets.forEach((set) => {
+            const typeSet = new Set<string>();
+            set.tuneIds.forEach((tuneId) => {
+              const tune = tunes.find((t) => t.tuneId === tuneId);
+              if (tune) {
+                typeSet.add(tune.tuneType);
+              }
+            });
+            set.tuneTypes = Array.from(typeSet);
+          });
 
           setSets(processedSets);
           setTunes(updatedTunes);
@@ -214,6 +228,7 @@ export const useUserData = (id: string) => {
               tuneNames,
               setIds,
               setNames,
+              dateAdded: session.dateAdded,
             };
             return mergeWithState(
               processed,

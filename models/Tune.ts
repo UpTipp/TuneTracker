@@ -5,7 +5,7 @@ interface TuneDocument extends Document {
   userId: string;
   tuneName: string;
   tuneType: string;
-  tuneKey?: string;
+  tuneKey?: string[];
   author?: string;
   recordingRef?: string[];
   links?: string[];
@@ -18,7 +18,7 @@ const TuneSchema: Schema = new Schema({
   userId: { type: String, required: true, ref: "User" }, // FK to User
   tuneName: { type: String, required: true },
   tuneType: { type: String, required: true },
-  tuneKey: { type: String },
+  tuneKey: [{ type: String }],
   author: { type: String },
   recordingRef: [{ type: String }],
   links: [{ type: String }],

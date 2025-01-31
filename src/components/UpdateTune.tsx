@@ -6,6 +6,7 @@ import {
   Label,
   Modal,
   TextInput,
+  Checkbox,
 } from "flowbite-react";
 import MediaInputsUpload from "./MediaInputsUpload";
 import LinksSection from "./LinksSection";
@@ -19,7 +20,7 @@ const UpdateTune = ({ type, itemId, tune, dataFetch }) => {
   const [tuneName, setTuneName] = useState(tune.tuneName);
   const [author, setAuthor] = useState(tune.author || "");
   const [tuneType, setTuneType] = useState(tune.tuneType);
-  const [tuneKey, setTuneKey] = useState(tune.tuneKey || "");
+  const [tuneKey, setTuneKey] = useState<string[]>(tune.tuneKey || []);
   const [links, setLinks] = useState<string[]>(tune.link || []);
   const [linkInput, setLinkInput] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -80,12 +81,20 @@ const UpdateTune = ({ type, itemId, tune, dataFetch }) => {
     setLinks(links.filter((_, i) => i !== index));
   };
 
+  function handleKeyChange(key: string) {
+    setTuneKey((prevKeys) =>
+      prevKeys.includes(key)
+        ? prevKeys.filter((k) => k !== key)
+        : [...prevKeys, key]
+    );
+  }
+
   // Sending the Data
   const handleUpdateTune = async () => {
     const formData = new FormData();
     formData.append("tuneName", tuneName);
     formData.append("tuneType", tuneType);
-    formData.append("tuneKey", tuneKey);
+    formData.append("tuneKey", JSON.stringify(tuneKey));
     formData.append("author", author);
     formData.append("comments", comments);
     formData.append("fileCommands", JSON.stringify(fileCommands));
@@ -176,17 +185,33 @@ const UpdateTune = ({ type, itemId, tune, dataFetch }) => {
             <div>
               <div className="mb-2 block">
                 <Label htmlFor="tuneKey" value="Key of Tune" />
+                {!tuneKey ||
+                  (tuneKey.length === 0 && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Keys: None
+                    </p>
+                  ))}
+                {tuneKey.length > 0 && tuneKey.length < 12 ? (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Keys: {tuneKey.join(", ")}
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Keys: {tuneKey.slice(0, 12).join(", ") + "..."}
+                  </p>
+                )}
               </div>
-              <Select
-                id="tuneKey"
-                value={tuneKey}
-                onChange={(event) => setTuneKey(event.target.value)}
-                required
-              >
-                {TUNE_KEYS.map((key) => (
-                  <option key={key} value={key}>
-                    {key}
-                  </option>
+              <Select id="tuneKey" value={tuneKey} onChange={() => {}} required>
+                {TUNE_KEYS.map((keyOption) => (
+                  <div key={keyOption}>
+                    <Checkbox
+                      id={keyOption}
+                      checked={tuneKey.includes(keyOption)}
+                      onChange={() => handleKeyChange(keyOption)}
+                    >
+                      {keyOption}
+                    </Checkbox>
+                  </div>
                 ))}
               </Select>
             </div>

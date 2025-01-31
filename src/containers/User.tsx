@@ -22,7 +22,7 @@ import DisplaySession from "../components/DisplaySession";
 import { useUserData } from "../hooks/useUserData";
 import { HiPlus } from "react-icons/hi";
 import { IoIosClose } from "react-icons/io";
-import { TUNE_TYPES, TUNE_KEYS } from "../shared/TuneOptions";
+import { TUNE_TYPES } from "../shared/TuneOptions";
 
 // Add these types at the top of the file, after imports
 type TimeframeFilter = {
@@ -42,6 +42,12 @@ type TuneTypeFilter = {
   slide: boolean;
   waltz: boolean;
   mazurka: boolean;
+  march: boolean;
+  barndance: boolean;
+  clog: boolean;
+  air: boolean;
+  "slow air": boolean;
+  strathspey: boolean;
   other: boolean;
 };
 
@@ -159,6 +165,13 @@ const FilterButtons = ({
           }
         >
           Last Practiced
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() =>
+            setSortBy((prev) => ({ ...prev, [type]: "leastPracticed" }))
+          }
+        >
+          Least Practiced
         </Dropdown.Item>
       </Dropdown>
       <Dropdown label="Filter By" dismissOnClick={false}>
@@ -284,6 +297,12 @@ const User = () => {
         slide: false,
         waltz: false,
         mazurka: false,
+        march: false,
+        barndance: false,
+        clog: false,
+        air: false,
+        "slow air": false,
+        strathspey: false,
         other: false,
       },
     },
@@ -291,6 +310,7 @@ const User = () => {
     sessions: { all: true, week: false, month: false, unpracticed: false },
   });
   const [search, setSearch] = useState({ tunes: "", sets: "", sessions: "" });
+  const [selectedTuneType, setSelectedTuneType] = useState<string>("");
 
   // Use the custom hook
   const { userData, tunes, sets, sessions, triggerDataFetch } = useUserData(id);
@@ -526,10 +546,12 @@ const User = () => {
             return sorted;
         }
       case "newest":
-        return sorted.sort(
-          (a, b) =>
-            new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime()
-        );
+        return sorted
+          .sort(
+            (a, b) =>
+              new Date(a.dateAdded).getTime() - new Date(b.dateAdded).getTime()
+          )
+          .reverse();
       case "oldest":
         return sorted.sort(
           (a, b) =>
@@ -541,6 +563,14 @@ const User = () => {
             new Date(b.lastPractice).getTime() -
             new Date(a.lastPractice).getTime()
         );
+      case "leastPracticed":
+        return sorted
+          .sort(
+            (a, b) =>
+              new Date(b.lastPractice).getTime() -
+              new Date(a.lastPractice).getTime()
+          )
+          .reverse();
       default:
         return sorted;
     }
@@ -634,18 +664,8 @@ const User = () => {
               unpracticed: false,
             };
           } else {
-            newFilter.tunes.type = {
-              all: true,
-              reel: false,
-              jig: false,
-              hornpipe: false,
-              "slip jig": false,
-              polka: false,
-              slide: false,
-              waltz: false,
-              mazurka: false,
-              other: false,
-            };
+            newFilter.tunes.type[value as keyof TuneTypeFilter] = false;
+            newFilter.tunes.type["all"] = true;
           }
         } else {
           if (category === "timeframe") {
@@ -748,6 +768,12 @@ const User = () => {
               slide: false,
               waltz: false,
               mazurka: false,
+              march: false,
+              barndance: false,
+              clog: false,
+              air: false,
+              "slow air": false,
+              strathspey: false,
               other: false,
             },
           },
@@ -807,6 +833,14 @@ const User = () => {
     setActiveTab(newTab);
     setCurrentPage(1); // Reset pagination
   }
+
+  const filteredTunes = tunes.filter(
+    (tune) => !selectedTuneType || tune.tuneType === selectedTuneType
+  );
+
+  const filteredSets = sets.filter(
+    (set) => !selectedTuneType || set.tuneTypes?.includes(selectedTuneType)
+  );
 
   return (
     <Frame>
@@ -934,6 +968,16 @@ const User = () => {
                             >
                               Last Practiced
                             </Dropdown.Item>
+                            <Dropdown.Item
+                              onClick={() =>
+                                setSortBy((prev) => ({
+                                  ...prev,
+                                  tunes: "leastPracticed",
+                                }))
+                              }
+                            >
+                              Least Practiced
+                            </Dropdown.Item>
                           </Dropdown>
                           <Dropdown
                             label="Filter By"
@@ -1018,7 +1062,7 @@ const User = () => {
             <HR className="my-4" />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 justify-center">
               {searchItems(
-                filterItems(sortItems(tunes, "tunes"), "tunes"),
+                filterItems(sortItems(filteredTunes, "tunes"), "tunes"),
                 "tunes",
                 search.tunes
               )
@@ -1036,7 +1080,7 @@ const User = () => {
 
             {/* Pagination */}
             {searchItems(
-              filterItems(sortItems(tunes, "tunes"), "tunes"),
+              filterItems(sortItems(filteredTunes, "tunes"), "tunes"),
               "tunes",
               search.tunes
             ).length > 21 && (
@@ -1046,7 +1090,7 @@ const User = () => {
                   currentPage={currentPage}
                   totalPages={Math.ceil(
                     searchItems(
-                      filterItems(sortItems(tunes, "tunes"), "tunes"),
+                      filterItems(sortItems(filteredTunes, "tunes"), "tunes"),
                       "tunes",
                       search.tunes
                     ).length / 21
@@ -1161,6 +1205,16 @@ const User = () => {
                             >
                               Last Practiced
                             </Dropdown.Item>
+                            <Dropdown.Item
+                              onClick={() =>
+                                setSortBy((prev) => ({
+                                  ...prev,
+                                  tunes: "leastPracticed",
+                                }))
+                              }
+                            >
+                              Least Practiced
+                            </Dropdown.Item>
                           </Dropdown>
                           <Dropdown label="Filter By" dismissOnClick={false}>
                             <div className="max-h-96 overflow-y-auto">
@@ -1218,7 +1272,7 @@ const User = () => {
             <HR className="my-4" />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 justify-center">
               {searchItems(
-                filterItems(sortItems(sets, "sets"), "sets"),
+                filterItems(sortItems(filteredSets, "sets"), "sets"),
                 "sets",
                 search.sets
               )
@@ -1236,7 +1290,7 @@ const User = () => {
 
             {/* Pagination */}
             {searchItems(
-              filterItems(sortItems(sets, "sets"), "sets"),
+              filterItems(sortItems(filteredSets, "sets"), "sets"),
               "sets",
               search.sets
             ).length > 21 && (
@@ -1246,7 +1300,7 @@ const User = () => {
                   currentPage={currentPage}
                   totalPages={Math.ceil(
                     searchItems(
-                      filterItems(sortItems(sets, "sets"), "sets"),
+                      filterItems(sortItems(filteredSets, "sets"), "sets"),
                       "sets",
                       search.sets
                     ).length / 21
@@ -1361,6 +1415,16 @@ const User = () => {
                               }
                             >
                               Last Practiced
+                            </Dropdown.Item>
+                            <Dropdown.Item
+                              onClick={() =>
+                                setSortBy((prev) => ({
+                                  ...prev,
+                                  tunes: "leastPracticed",
+                                }))
+                              }
+                            >
+                              Least Practiced
                             </Dropdown.Item>
                           </Dropdown>
                           <Dropdown label="Filter By" dismissOnClick={false}>

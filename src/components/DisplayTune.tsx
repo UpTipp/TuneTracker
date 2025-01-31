@@ -45,8 +45,15 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
   const checkId = JSON.parse(Cookie.get("user") || "{}").id;
   const [showModal, setShowModal] = useState(false);
 
+  const hasBackContent =
+    (tune.links && tune.links.length > 0) ||
+    (tune.creatorComments && tune.creatorComments !== "") ||
+    (tune.recordingRef && tune.recordingRef.length > 0) ||
+    (tune.setIds && tune.setIds.length > 2) ||
+    (tune.sessionIds && tune.sessionIds.length > 2);
+
   const handleCardClick = (e: React.MouseEvent<HTMLElement>) => {
-    if (checkCardClick(e)) {
+    if (checkCardClick(e) && hasBackContent) {
       setShowModal(true);
     }
   };
@@ -67,11 +74,6 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
   let dateAddedStr = dateAdded ? dateAdded.toDateString() : null;
   let lastPracticeStr = lastPractice ? lastPractice.toDateString() : null;
 
-  const hasBackContent =
-    (tune.links && tune.links.length > 0) ||
-    (tune.creatorComments && tune.creatorComments !== "") ||
-    (tune.recordingRef && tune.recordingRef.length > 0);
-
   return (
     <>
       <Card
@@ -90,8 +92,8 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
           dataFetch={dataFetch}
         />
         <div>
-          {tune.tuneKey && tune.tuneKey !== "" ? (
-            <p className="text-sm">Key: {tune.tuneKey}</p>
+          {tune.tuneKey && tune.tuneKey.isArray() && tune.tuneKey.length > 0 ? (
+            <p className="text-sm">Key: {tune.tuneKey.join(", ")}</p>
           ) : (
             <p className="text-sm">[Unspecified Key]</p>
           )}
@@ -280,8 +282,10 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
           </div>
 
           <div>
-            {tune.tuneKey && tune.tuneKey !== "" ? (
-              <p className="text-sm">Key: {tune.tuneKey}</p>
+            {tune.tuneKey &&
+            tune.tuneKey.isArray() &&
+            tune.tuneKey.length > 0 ? (
+              <p className="text-sm">Key: {tune.tuneKey.join(", ")}</p>
             ) : (
               <p className="text-sm">[Unspecified Key]</p>
             )}
