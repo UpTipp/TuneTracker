@@ -253,7 +253,11 @@ const FilterButtons = ({
                   key={tuneType}
                   label={tuneType}
                   checked={filterBy.sets.type[tuneType]}
-                  onChange={handleCheckboxClick("sets", "type", tuneType)}
+                  onChange={handleCheckboxClick(
+                    "sets",
+                    "type",
+                    tuneType.toLowerCase()
+                  )}
                 />
               ))}
             </>
@@ -644,7 +648,9 @@ const User = () => {
           filter.type.all ||
           Object.entries(filter.type)
             .filter(([key, value]) => key !== "all" && value)
-            .some(([key]) => item.tuneType?.toLowerCase() === key);
+            .some(
+              ([key]) => item.tuneType?.toLowerCase() === key.toLowerCase()
+            );
 
         console.log(
           `Tune ${item.tuneName} - Timeframe Match: ${timeframeMatch}, Type Match: ${typeMatch}`
@@ -1166,7 +1172,7 @@ const User = () => {
                                   onChange={handleCheckboxClick(
                                     "tunes",
                                     "type",
-                                    tuneType
+                                    tuneType.toLowerCase()
                                   )}
                                 />
                               ))}
@@ -1399,7 +1405,7 @@ const User = () => {
                                   onChange={handleCheckboxClick(
                                     "sets",
                                     "type",
-                                    tuneType
+                                    tuneType.toLowerCase()
                                   )}
                                 />
                               ))}
