@@ -58,7 +58,13 @@ type TuneFilter = {
 
 type FilterState = {
   tunes: TuneFilter;
-  sets: TimeframeFilter;
+  sets: {
+    all: boolean;
+    week: boolean;
+    month: boolean;
+    unpracticed: boolean;
+    type: TuneTypeFilter;
+  };
   sessions: TimeframeFilter;
 };
 
@@ -248,6 +254,26 @@ const FilterButtons = ({
               ))}
             </>
           )}
+
+          {type === "sets" && (
+            <>
+              <Dropdown.Divider />
+              <Dropdown.Header>Tune Type</Dropdown.Header>
+              <FilterCheckbox
+                label="All Types"
+                checked={filterBy.sets.type.all}
+                onChange={handleCheckboxClick("sets", "type", "all")}
+              />
+              {TUNE_TYPES.map((tuneType) => (
+                <FilterCheckbox
+                  key={tuneType}
+                  label={tuneType}
+                  checked={filterBy.sets.type[tuneType]}
+                  onChange={handleCheckboxClick("sets", "type", tuneType)}
+                />
+              ))}
+            </>
+          )}
         </div>
       </Dropdown>
       <Button
@@ -306,7 +332,30 @@ const User = () => {
         other: false,
       },
     },
-    sets: { all: true, week: false, month: false, unpracticed: false },
+    sets: {
+      all: true,
+      week: false,
+      month: false,
+      unpracticed: false,
+      type: {
+        all: true,
+        reel: false,
+        jig: false,
+        hornpipe: false,
+        "slip jig": false,
+        polka: false,
+        slide: false,
+        waltz: false,
+        mazurka: false,
+        march: false,
+        barndance: false,
+        clog: false,
+        air: false,
+        "slow air": false,
+        strathspey: false,
+        other: false,
+      },
+    },
     sessions: { all: true, week: false, month: false, unpracticed: false },
   });
   const [search, setSearch] = useState({ tunes: "", sets: "", sessions: "" });
@@ -619,6 +668,49 @@ const User = () => {
     }
 
     // For sets and sessions
+    if (type === "sets") {
+      const filter = filterBy.sets;
+
+      // If "all" is selected for both timeframe and type, return all items
+      if (filter.all && filter.type.all) return items;
+
+      return items.filter((item) => {
+        // Check timeframe
+        const timeframeMatch =
+          filter.all ||
+          Object.entries(filter)
+            .filter(([key, value]) => key !== "all" && key !== "type" && value)
+            .some(([key]) => {
+              const now = new Date();
+              const lastPractice = new Date(item.lastPractice);
+              const diffDays = Math.floor(
+                (now.getTime() - lastPractice.getTime()) / (1000 * 60 * 60 * 24)
+              );
+
+              switch (key) {
+                case "week":
+                  return diffDays <= 7;
+                case "month":
+                  return diffDays <= 30;
+                case "unpracticed":
+                  return !item.lastPractice;
+                default:
+                  return false;
+              }
+            });
+
+        // Check type
+        const typeMatch =
+          filter.type.all ||
+          Object.entries(filter.type)
+            .filter(([key, value]) => key !== "all" && value)
+            .some(([key]) =>
+              item.tuneTypes?.map((t: string) => t.toLowerCase()).includes(key)
+            );
+        return timeframeMatch && typeMatch;
+      });
+    }
+
     const filter = filterBy[type as keyof typeof filterBy] as TimeframeFilter;
     if (filter?.all) return items;
 
@@ -702,6 +794,56 @@ const User = () => {
           }
         }
         return newFilter;
+      } else if (type === "sets") {
+        if (!category) return prev;
+        const newFilter = { ...prev };
+        if (value === "all") {
+          if (category === "timeframe") {
+            newFilter.sets = {
+              ...newFilter.sets,
+              all: true,
+              week: false,
+              month: false,
+              unpracticed: false,
+            };
+          } else {
+            newFilter.sets.type[value as keyof TuneTypeFilter] = false;
+            newFilter.sets.type["all"] = true;
+          }
+        } else {
+          if (category === "timeframe") {
+            const newTimeframe = {
+              ...newFilter.sets,
+              all: false,
+              [value]: !newFilter.sets[value as keyof TimeframeFilter],
+            };
+            // If no timeframe is selected, set all to true
+            if (
+              !Object.entries(newTimeframe).some(
+                ([key, value]) => key !== "all" && value
+              )
+            ) {
+              newTimeframe.all = true;
+            }
+            newFilter.sets = newTimeframe;
+          } else {
+            const newType = {
+              ...newFilter.sets.type,
+              all: false,
+              [value]: !newFilter.sets.type[value as keyof TuneTypeFilter],
+            };
+            // If no type is selected, set all to true
+            if (
+              !Object.entries(newType).some(
+                ([key, value]) => key !== "all" && value
+              )
+            ) {
+              newType.all = true;
+            }
+            newFilter.sets.type = newType;
+          }
+        }
+        return newFilter;
       } else {
         const targetFilter = prev[type as keyof typeof prev] as TimeframeFilter;
         const newFilter =
@@ -758,6 +900,34 @@ const User = () => {
               month: false,
               unpracticed: false,
             },
+            type: {
+              all: true,
+              reel: false,
+              jig: false,
+              hornpipe: false,
+              "slip jig": false,
+              polka: false,
+              slide: false,
+              waltz: false,
+              mazurka: false,
+              march: false,
+              barndance: false,
+              clog: false,
+              air: false,
+              "slow air": false,
+              strathspey: false,
+              other: false,
+            },
+          },
+        };
+      } else if (type === "sets") {
+        return {
+          ...prev,
+          sets: {
+            all: true,
+            week: false,
+            month: false,
+            unpracticed: false,
             type: {
               all: true,
               reel: false,
@@ -841,6 +1011,12 @@ const User = () => {
   const filteredSets = sets.filter(
     (set) => !selectedTuneType || set.tuneTypes?.includes(selectedTuneType)
   );
+
+  function filterSetsByTuneType(sets: any[], typeFilter: TuneTypeFilter) {
+    return sets.filter((set) =>
+      set.tuneTypes.some((type: string) => typeFilter[type])
+    );
+  }
 
   return (
     <Frame>
@@ -1254,6 +1430,29 @@ const User = () => {
                                   "unpracticed"
                                 )}
                               />
+                              <Dropdown.Divider />
+                              <Dropdown.Header>Tune Type</Dropdown.Header>
+                              <FilterCheckbox
+                                label="All Types"
+                                checked={filterBy.sets.type.all}
+                                onChange={handleCheckboxClick(
+                                  "sets",
+                                  "type",
+                                  "all"
+                                )}
+                              />
+                              {TUNE_TYPES.map((tuneType) => (
+                                <FilterCheckbox
+                                  key={tuneType}
+                                  label={tuneType}
+                                  checked={filterBy.sets.type[tuneType]}
+                                  onChange={handleCheckboxClick(
+                                    "sets",
+                                    "type",
+                                    tuneType
+                                  )}
+                                />
+                              ))}
                             </div>
                           </Dropdown>
                           <Button
@@ -1272,7 +1471,13 @@ const User = () => {
             <HR className="my-4" />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 justify-center">
               {searchItems(
-                filterItems(sortItems(filteredSets, "sets"), "sets"),
+                filterItems(
+                  sortItems(
+                    filterSetsByTuneType(filteredSets, filterBy.tunes.type),
+                    "sets"
+                  ),
+                  "sets"
+                ),
                 "sets",
                 search.sets
               )
@@ -1290,7 +1495,13 @@ const User = () => {
 
             {/* Pagination */}
             {searchItems(
-              filterItems(sortItems(filteredSets, "sets"), "sets"),
+              filterItems(
+                sortItems(
+                  filterSetsByTuneType(filteredSets, filterBy.tunes.type),
+                  "sets"
+                ),
+                "sets"
+              ),
               "sets",
               search.sets
             ).length > 21 && (
@@ -1300,7 +1511,16 @@ const User = () => {
                   currentPage={currentPage}
                   totalPages={Math.ceil(
                     searchItems(
-                      filterItems(sortItems(filteredSets, "sets"), "sets"),
+                      filterItems(
+                        sortItems(
+                          filterSetsByTuneType(
+                            filteredSets,
+                            filterBy.tunes.type
+                          ),
+                          "sets"
+                        ),
+                        "sets"
+                      ),
                       "sets",
                       search.sets
                     ).length / 21
