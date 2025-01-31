@@ -194,14 +194,15 @@ const NewTune = ({
               </div>
               <Select id="tuneKey" value={tuneKey} onChange={() => {}} required>
                 {TUNE_KEYS.map((keyOption) => (
-                  <div key={keyOption}>
+                  <div
+                    key={keyOption}
+                    onClick={() => handleKeyChange(keyOption)}
+                  >
                     <Checkbox
                       id={keyOption}
                       checked={tuneKey.includes(keyOption)}
-                      onChange={() => handleKeyChange(keyOption)}
-                    >
-                      {keyOption}
-                    </Checkbox>
+                    />
+                    <Label htmlFor={keyOption} value={keyOption} />
                   </div>
                 ))}
               </Select>
