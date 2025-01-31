@@ -83,7 +83,7 @@ const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory }) => {
         <ItemHeader
           itemName={set.setName}
           item={"set"}
-          itemType={set.tuneTypes.join(", ")}
+          itemType={set.tuneTypes.length > 0 ? set.tuneTypes.join(", ") : "Set"}
           itemState={set.state}
           itemId={set.setId}
           userId={userId}
@@ -263,7 +263,7 @@ const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory }) => {
         <Modal.Body>
           <div className="flex flex-row justify-between items-center">
             <p className="text-center text-sm text-gray-400 italic">
-              {set.tuneTypes.join(", ")}
+              {set.tuneTypes.length > 0 ? set.tuneTypes.join(", ") : "Set"}
             </p>
             <div className="flex justify-end">
               <ItemState

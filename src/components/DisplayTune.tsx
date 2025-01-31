@@ -92,8 +92,10 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
           dataFetch={dataFetch}
         />
         <div>
-          {tune.tuneKey && tune.tuneKey.isArray() && tune.tuneKey.length > 0 ? (
-            <p className="text-sm">Key: {tune.tuneKey.join(", ")}</p>
+          {tune.tuneKey &&
+          Array.isArray(tune.tuneKey) &&
+          tune.tuneKey.length > 0 ? (
+            <p className="text-sm">Key(s): {tune.tuneKey.join(", ")}</p>
           ) : (
             <p className="text-sm">[Unspecified Key]</p>
           )}
@@ -283,7 +285,7 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
 
           <div>
             {tune.tuneKey &&
-            tune.tuneKey.isArray() &&
+            Array.isArray(tune.tuneKey) &&
             tune.tuneKey.length > 0 ? (
               <p className="text-sm">Key: {tune.tuneKey.join(", ")}</p>
             ) : (
