@@ -11,7 +11,9 @@ const UpdatePractice = ({ type, id, userId, dataFetch }) => {
       body: JSON.stringify({ id: id }),
     }).then((response) => {
       if (response.ok) {
-        dataFetch();
+        setTimeout(() => {
+          dataFetch();
+        }, 1000);
       }
     });
   };

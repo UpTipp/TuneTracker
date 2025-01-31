@@ -76,7 +76,9 @@ const UpdateSession = ({
 
       const result = await response.json();
       console.log("Success:", result);
-      dataFetch();
+      setTimeout(() => {
+        dataFetch();
+      }, 1000);
       onCloseModal();
     } catch (error) {
       console.error("Error:", error);

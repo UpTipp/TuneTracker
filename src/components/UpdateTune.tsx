@@ -7,6 +7,7 @@ import {
   Modal,
   TextInput,
   Checkbox,
+  Dropdown,
 } from "flowbite-react";
 import MediaInputsUpload from "./MediaInputsUpload";
 import LinksSection from "./LinksSection";
@@ -81,11 +82,11 @@ const UpdateTune = ({ type, itemId, tune, dataFetch }) => {
     setLinks(links.filter((_, i) => i !== index));
   };
 
-  function handleKeyChange(key: string) {
+  function handleKeyChange(selectedKey: string) {
     setTuneKey((prevKeys) =>
-      prevKeys.includes(key)
-        ? prevKeys.filter((k) => k !== key)
-        : [...prevKeys, key]
+      prevKeys.includes(selectedKey)
+        ? prevKeys.filter((k) => k !== selectedKey)
+        : [...prevKeys, selectedKey]
     );
   }
 
@@ -122,7 +123,9 @@ const UpdateTune = ({ type, itemId, tune, dataFetch }) => {
 
       const result = await response.json();
       console.log("Success:", result);
-      dataFetch();
+      setTimeout(() => {
+        dataFetch();
+      }, 1000);
       setOpenModal(false);
       onCloseModal();
     } catch (error) {
@@ -201,20 +204,21 @@ const UpdateTune = ({ type, itemId, tune, dataFetch }) => {
                   </p>
                 )}
               </div>
-              <Select id="tuneKey" value={tuneKey} onChange={() => {}} required>
-                {TUNE_KEYS.map((keyOption) => (
-                  <div
-                    key={keyOption}
-                    onClick={() => handleKeyChange(keyOption)}
-                  >
-                    <Checkbox
-                      id={keyOption}
-                      checked={tuneKey.includes(keyOption)}
-                    />
-                    <Label htmlFor={keyOption} value={keyOption} />
-                  </div>
-                ))}
-              </Select>
+              <Dropdown label="Select Keys" placement="bottom">
+                <div className="max-h-48 overflow-y-auto">
+                  {TUNE_KEYS.map((keyOption) => (
+                    <Dropdown.Item key={keyOption}>
+                      <Checkbox
+                        checked={tuneKey.includes(keyOption)}
+                        onChange={() => handleKeyChange(keyOption)}
+                        id={keyOption}
+                      >
+                        {keyOption}
+                      </Checkbox>
+                    </Dropdown.Item>
+                  ))}
+                </div>
+              </Dropdown>
             </div>
 
             {/* Author */}

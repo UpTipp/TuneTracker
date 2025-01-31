@@ -176,7 +176,9 @@ const NewSession = ({ dataFetch, userTunes, userSets, goTo }) => {
 
       const result = await response.json();
       console.log("Success:", result);
-      dataFetch();
+      setTimeout(() => {
+        dataFetch();
+      }, 1000);
       setOpenModal(false);
       onCloseModal();
 

@@ -60,7 +60,9 @@ const ItemState = ({ state, item, id, userId, dataFetch }) => {
       setLabel(getLabel(newState));
       setClassName(getClassName(newState));
 
-      dataFetch();
+      setTimeout(() => {
+        dataFetch();
+      }, 1000);
     } catch (error) {
       console.error("Error updating state:", error);
     }
