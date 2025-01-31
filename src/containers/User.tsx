@@ -59,10 +59,7 @@ type TuneFilter = {
 type FilterState = {
   tunes: TuneFilter;
   sets: {
-    all: boolean;
-    week: boolean;
-    month: boolean;
-    unpracticed: boolean;
+    timeframe: TimeframeFilter;
     type: TuneTypeFilter;
   };
   sessions: TimeframeFilter;
@@ -333,10 +330,7 @@ const User = () => {
       },
     },
     sets: {
-      all: true,
-      week: false,
-      month: false,
-      unpracticed: false,
+      timeframe: { all: true, week: false, month: false, unpracticed: false },
       type: {
         all: true,
         reel: false,
@@ -675,35 +669,49 @@ const User = () => {
     // For sets and sessions
     if (type === "sets") {
       const filter = filterBy.sets;
-      const timeframeFilteredSets = items.filter((item) => {
-        const now = new Date();
-        const lastPractice = new Date(item.lastPractice);
-        const diffDays = Math.floor(
-          (now.getTime() - lastPractice.getTime()) / (1000 * 60 * 60 * 24)
+
+      // If "all" is selected for both timeframe and type, return all items
+      if (filter.timeframe.all && filter.type.all) return items;
+
+      return items.filter((set) => {
+        // Check timeframe
+        const timeframeMatch =
+          filter.timeframe.all ||
+          Object.entries(filter.timeframe)
+            .filter(([key, value]) => key !== "all" && value)
+            .some(([key]) => {
+              const now = new Date();
+              const lastPractice = new Date(set.lastPractice);
+              const diffDays = Math.floor(
+                (now.getTime() - lastPractice.getTime()) / (1000 * 60 * 60 * 24)
+              );
+
+              switch (key) {
+                case "week":
+                  return diffDays <= 7;
+                case "month":
+                  return diffDays <= 30;
+                case "unpracticed":
+                  return !set.lastPractice;
+                default:
+                  return false;
+              }
+            });
+
+        // Check type
+        const typeMatch =
+          filter.type.all ||
+          Object.entries(filter.type)
+            .filter(([key, value]) => key !== "all" && value)
+            .some(([key]) =>
+              set.tuneTypes?.map((t: string) => t.toLowerCase()).includes(key)
+            );
+
+        console.log(
+          `Set ${set.setName} - Timeframe Match: ${timeframeMatch}, Type Match: ${typeMatch}`
         );
-
-        if (filter.all) return true;
-        if (filter.week && diffDays <= 7) return true;
-        if (filter.month && diffDays <= 30) return true;
-        if (filter.unpracticed && !item.lastPractice) return true;
-
-        return false;
+        return timeframeMatch && typeMatch;
       });
-
-      const typedSets = timeframeFilteredSets.filter((set) => {
-        if (filter.type.all) return true;
-        if (!set.tuneTypes) return false;
-
-        const lowerSetTypes = set.tuneTypes.map((t) => t.toLowerCase());
-        const typeMatch = Object.entries(filter.type)
-          .filter(([k, v]) => k !== "all" && v)
-          .some(([k]) => lowerSetTypes.includes(k));
-
-        console.log(`Set ${set.setName} - Type Match: ${typeMatch}`);
-        return typeMatch;
-      });
-
-      return typedSets;
     }
 
     const filter = filterBy[type as keyof typeof filterBy] as TimeframeFilter;
@@ -739,28 +747,28 @@ const User = () => {
     value: string
   ) => {
     setFilterBy((prev: FilterState) => {
-      if (type === "tunes") {
+      if (type === "tunes" || type === "sets") {
         if (!category) return prev;
         const newFilter = { ...prev };
         if (value === "all") {
           if (category === "timeframe") {
-            newFilter.tunes.timeframe = {
+            newFilter[type].timeframe = {
               all: true,
               week: false,
               month: false,
               unpracticed: false,
             };
           } else {
-            newFilter.tunes.type[value as keyof TuneTypeFilter] = false;
-            newFilter.tunes.type["all"] = true;
+            newFilter[type].type[value as keyof TuneTypeFilter] = false;
+            newFilter[type].type["all"] = true;
           }
         } else {
           if (category === "timeframe") {
             const newTimeframe = {
-              ...newFilter.tunes.timeframe,
+              ...newFilter[type].timeframe,
               all: false,
               [value]:
-                !newFilter.tunes.timeframe[value as keyof TimeframeFilter],
+                !newFilter[type].timeframe[value as keyof TimeframeFilter],
             };
             // If no timeframe is selected, set all to true
             if (
@@ -770,12 +778,12 @@ const User = () => {
             ) {
               newTimeframe.all = true;
             }
-            newFilter.tunes.timeframe = newTimeframe;
+            newFilter[type].timeframe = newTimeframe;
           } else {
             const newType = {
-              ...newFilter.tunes.type,
+              ...newFilter[type].type,
               all: false,
-              [value]: !newFilter.tunes.type[value as keyof TuneTypeFilter],
+              [value]: !newFilter[type].type[value as keyof TuneTypeFilter],
             };
             // If no type is selected, set all to true
             if (
@@ -785,57 +793,7 @@ const User = () => {
             ) {
               newType.all = true;
             }
-            newFilter.tunes.type = newType;
-          }
-        }
-        return newFilter;
-      } else if (type === "sets") {
-        if (!category) return prev;
-        const newFilter = { ...prev };
-        if (value === "all") {
-          if (category === "timeframe") {
-            newFilter.sets = {
-              ...newFilter.sets,
-              all: true,
-              week: false,
-              month: false,
-              unpracticed: false,
-            };
-          } else {
-            newFilter.sets.type[value as keyof TuneTypeFilter] = false;
-            newFilter.sets.type["all"] = true;
-          }
-        } else {
-          if (category === "timeframe") {
-            const newTimeframe = {
-              ...newFilter.sets,
-              all: false,
-              [value]: !newFilter.sets[value as keyof TimeframeFilter],
-            };
-            // If no timeframe is selected, set all to true
-            if (
-              !Object.entries(newTimeframe).some(
-                ([key, value]) => key !== "all" && value
-              )
-            ) {
-              newTimeframe.all = true;
-            }
-            newFilter.sets = newTimeframe;
-          } else {
-            const newType = {
-              ...newFilter.sets.type,
-              all: false,
-              [value]: !newFilter.sets.type[value as keyof TuneTypeFilter],
-            };
-            // If no type is selected, set all to true
-            if (
-              !Object.entries(newType).some(
-                ([key, value]) => key !== "all" && value
-              )
-            ) {
-              newType.all = true;
-            }
-            newFilter.sets.type = newType;
+            newFilter[type].type = newType;
           }
         }
         return newFilter;
@@ -919,10 +877,12 @@ const User = () => {
         return {
           ...prev,
           sets: {
-            all: true,
-            week: false,
-            month: false,
-            unpracticed: false,
+            timeframe: {
+              all: true,
+              week: false,
+              month: false,
+              unpracticed: false,
+            },
             type: {
               all: true,
               reel: false,
@@ -1391,37 +1351,37 @@ const User = () => {
                             <div className="max-h-96 overflow-y-auto">
                               <FilterCheckbox
                                 label="All Time"
-                                checked={filterBy.sets.all}
+                                checked={filterBy.sets.timeframe.all}
                                 onChange={handleCheckboxClick(
                                   "sets",
-                                  null,
+                                  "timeframe",
                                   "all"
                                 )}
                               />
                               <FilterCheckbox
                                 label="Last Week"
-                                checked={filterBy.sets.week}
+                                checked={filterBy.sets.timeframe.week}
                                 onChange={handleCheckboxClick(
                                   "sets",
-                                  null,
+                                  "timeframe",
                                   "week"
                                 )}
                               />
                               <FilterCheckbox
                                 label="Last Month"
-                                checked={filterBy.sets.month}
+                                checked={filterBy.sets.timeframe.month}
                                 onChange={handleCheckboxClick(
                                   "sets",
-                                  null,
+                                  "timeframe",
                                   "month"
                                 )}
                               />
                               <FilterCheckbox
                                 label="Unpracticed"
-                                checked={filterBy.sets.unpracticed}
+                                checked={filterBy.sets.timeframe.unpracticed}
                                 onChange={handleCheckboxClick(
                                   "sets",
-                                  null,
+                                  "timeframe",
                                   "unpracticed"
                                 )}
                               />
@@ -1582,7 +1542,7 @@ const User = () => {
                             Practice Oldest
                           </Button>
                           <Button
-                            className="bg-emerald-300 hover:bg-emerald-400"
+                            className="bg-emerald-300 hover:enabled:bg-emerald-400"
                             onClick={() => practiceOldest(sessions, "session")}
                           >
                             Random Practice
