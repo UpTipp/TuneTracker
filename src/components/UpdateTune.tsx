@@ -209,6 +209,7 @@ const UpdateTune = ({ type, itemId, tune, dataFetch }) => {
                 label="Select Keys"
                 placement="bottom"
                 dismissOnClick={false}
+                className="max-h-48 overflow-y-auto"
               >
                 {TUNE_KEYS.map((keyOption) => (
                   <Dropdown.Item key={keyOption}>

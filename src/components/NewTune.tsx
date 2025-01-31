@@ -200,16 +200,19 @@ const NewTune = ({
                 label="Select Keys"
                 placement="bottom"
                 dismissOnClick={false}
+                className="max-h-48 overflow-y-auto"
               >
                 {TUNE_KEYS.map((keyOption) => (
-                  <Dropdown.Item key={keyOption}>
-                    <div onClick={() => handleKeyChange(keyOption)}>
-                      <Checkbox
-                        id={keyOption}
-                        checked={tuneKey.includes(keyOption)}
-                      />
-                      <Label htmlFor={keyOption} value={keyOption} />
-                    </div>
+                  <Dropdown.Item
+                    key={keyOption}
+                    className="flex gap-2"
+                    onClick={() => handleKeyChange(keyOption)}
+                  >
+                    <Checkbox
+                      id={keyOption}
+                      checked={tuneKey.includes(keyOption)}
+                    />
+                    <Label htmlFor={keyOption} value={keyOption} />
                   </Dropdown.Item>
                 ))}
               </Dropdown>
