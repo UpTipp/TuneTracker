@@ -8,7 +8,12 @@ interface AudioRecorderProps {
 const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
   const { status, startRecording, pauseRecording, stopRecording } =
     useReactMediaRecorder({
-      audio: true,
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        sampleRate: 48000,
+      },
       onStop: async (blobUrl, blob) => {
         const file = new File([blob], "recording.mp3", { type: "audio/mp3" });
         const url = URL.createObjectURL(file);
