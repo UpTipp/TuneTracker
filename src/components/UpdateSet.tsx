@@ -114,6 +114,7 @@ const UpdateSet = ({ type, itemId, set, dataFetch, userTunes, allTunes }) => {
   }
 
   const handleUpdateSet = async () => {
+    console.log("Final tunes:", tunes);
     const formData = new FormData();
     formData.append("setName", setName);
     formData.append("comments", comments);
@@ -174,12 +175,14 @@ const UpdateSet = ({ type, itemId, set, dataFetch, userTunes, allTunes }) => {
   };
 
   function addTune(tune: { tuneId: string; tuneName: string }) {
+    console.log("Adding tune:", tune);
     setTunes((prev) => [...prev, tune]);
     setTuneSearch("");
     setFilteredTunes([]);
   }
 
   function removeTune(tuneId: string) {
+    console.log("Removing tune ID:", tuneId);
     setTunes((prev) => prev.filter((t) => t.tuneId !== tuneId));
   }
 

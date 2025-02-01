@@ -1121,6 +1121,27 @@ app.put(
         set.comments = req.body.comments;
       }
 
+      let tunes = req.body.tunes;
+      let uploadTunes = [];
+      for (let tune in tunes) {
+        console.log("Checking tune:", tunes[tune]);
+        if (
+          !user.tuneStates
+            .map((tuneState) => tuneState.tuneId)
+            .includes(tunes[tune])
+        ) {
+          return res
+            .status(400)
+            .send("Tune not found in user's tuneStates: " + tunes[tune]);
+        } else {
+          uploadTunes.push(tunes[tune]);
+        }
+      }
+
+      if (uploadTunes.length >= 2) {
+        set.tuneIds = uploadTunes;
+      }
+
       await set.save();
       return res.status(200).json(set);
     } catch (error) {
