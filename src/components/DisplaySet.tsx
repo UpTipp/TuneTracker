@@ -41,7 +41,7 @@ function checkCardClick(e: React.MouseEvent<HTMLElement>) {
   );
 }
 
-const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory }) => {
+const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory, allTunes }) => {
   const checkId = JSON.parse(Cookie.get("user") || "{}").id;
   const [showModal, setShowModal] = useState(false);
 
@@ -102,7 +102,7 @@ const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory }) => {
 
             <div className="flex justify-normal flex-wrap non-clickable">
               <p className="text-sm text-green-500 mr-1">Tunes:</p>
-              {set.tuneIds.map((tuneId, index) => (
+              {set.tuneIds.slice(0, 2).map((tuneId, index) => (
                 <>
                   <a
                     className="text-sm text-blue-400 hover:text-emerald-500"
@@ -114,19 +114,16 @@ const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory }) => {
                       : set.tuneNames[index].substring(0, 20) + "..."}
                     ]
                   </a>
-                  {index < 2
-                    ? index < set.tuneIds.length - 1 && (
-                        <p className="mr-1">,</p>
-                      )
-                    : index < set.tuneIds.length - 1 && (
-                        <p className="mr-1">, ...</p>
-                      )}
+                  {index < set.tuneIds.slice(0, 2).length - 1 && (
+                    <p className="mr-1">,</p>
+                  )}
                 </>
               ))}
+              {set.tuneIds.length > 2 && <p className="mr-1">, ...</p>}
             </div>
             <div className="flex justify-normal flex-wrap non-clickable">
               <p className="text-sm text-green-500 mr-1">Sessions:</p>
-              {set.sessionIds.map((sessionId, index) => (
+              {set.sessionIds.slice(0, 2).map((sessionId, index) => (
                 <>
                   <a
                     className="text-sm text-blue-400 hover:text-emerald-500"
@@ -134,15 +131,12 @@ const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory }) => {
                   >
                     [{index}]
                   </a>
-                  {index < 2
-                    ? index < set.sessionIds.length - 1 && (
-                        <p className="mr-1">,</p>
-                      )
-                    : index < set.sessionIds.length - 1 && (
-                        <p className="mr-1">, ...</p>
-                      )}
+                  {index < set.sessionIds.slice(0, 2).length - 1 && (
+                    <p className="mr-1">,</p>
+                  )}
                 </>
               ))}
+              {set.sessionIds.length > 2 && <p className="mr-1">, ...</p>}
             </div>
           </div>
         </div>
@@ -184,6 +178,7 @@ const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory }) => {
                           tuneId: id,
                           tuneName: set.tuneNames[index],
                         }))}
+                        allTunes={allTunes}
                       />
                     </div>
                   </>
@@ -305,10 +300,11 @@ const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory }) => {
                         ]
                       </a>
                       {index < set.tuneIds.length - 1 && (
-                        <p className="mr-1">, </p>
+                        <p className="mr-1">,</p>
                       )}
                     </>
                   ))}
+                  {set.tuneIds.length > 2 && <p className="mr-1">, ...</p>}
                 </div>
                 <div className="flex justify-normal flex-wrap non-clickable">
                   <p className="text-sm text-green-500 mr-1">Sessions:</p>
@@ -321,10 +317,11 @@ const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory }) => {
                         [{index}]
                       </a>
                       {index < set.sessionIds.length - 1 && (
-                        <p className="mr-1">, </p>
+                        <p className="mr-1">,</p>
                       )}
                     </>
                   ))}
+                  {set.sessionIds.length > 2 && <p className="mr-1">, ...</p>}
                 </div>
               </div>
             </div>
@@ -428,6 +425,7 @@ const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory }) => {
                           })),
                         }}
                         dataFetch={dataFetch}
+                        allTunes={allTunes}
                         userTunes={set.tuneIds.map((id, index) => ({
                           tuneId: id,
                           tuneName: set.tuneNames[index],

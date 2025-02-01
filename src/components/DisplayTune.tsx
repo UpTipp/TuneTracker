@@ -44,6 +44,7 @@ function checkCardClick(e: React.MouseEvent<HTMLElement>) {
 const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
   const checkId = JSON.parse(Cookie.get("user") || "{}").id;
   const [showModal, setShowModal] = useState(false);
+  const [currentTune, setCurrentTune] = useState(tune); // Add state for current tune
 
   const hasBackContent =
     (tune.links && tune.links.length > 0) ||
@@ -55,6 +56,7 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
   const handleCardClick = (e: React.MouseEvent<HTMLElement>) => {
     if (checkCardClick(e) && hasBackContent) {
       setShowModal(true);
+      setCurrentTune(tune); // Set the current tune when the modal is opened
     }
   };
 
@@ -188,7 +190,7 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
                       <UpdateTune
                         type={"tune"}
                         itemId={tune.tuneId}
-                        tune={tune}
+                        tune={currentTune} // Pass the current tune
                         dataFetch={dataFetch}
                       />
                     </div>
@@ -442,7 +444,7 @@ const DisplayTune = ({ tune, userId, dataFetch, goTo, itemMemory }) => {
                       <UpdateTune
                         type={"tune"}
                         itemId={tune.tuneId}
-                        tune={tune}
+                        tune={currentTune} // Pass the current tune
                         dataFetch={dataFetch}
                       />
                     </div>

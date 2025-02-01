@@ -232,8 +232,12 @@ const FilterButtons = ({
                 <FilterCheckbox
                   key={tuneType}
                   label={tuneType}
-                  checked={filterBy.tunes.type[tuneType]}
-                  onChange={handleCheckboxClick("tunes", "type", tuneType)}
+                  checked={filterBy.tunes.type[tuneType.toLowerCase()]}
+                  onChange={handleCheckboxClick(
+                    "tunes",
+                    "type",
+                    tuneType.toLowerCase()
+                  )}
                 />
               ))}
             </>
@@ -252,7 +256,7 @@ const FilterButtons = ({
                 <FilterCheckbox
                   key={tuneType}
                   label={tuneType}
-                  checked={filterBy.sets.type[tuneType]}
+                  checked={filterBy.sets.type[tuneType.toLowerCase()]}
                   onChange={handleCheckboxClick(
                     "sets",
                     "type",
@@ -1168,7 +1172,9 @@ const User = () => {
                                 <FilterCheckbox
                                   key={tuneType}
                                   label={tuneType}
-                                  checked={filterBy.tunes.type[tuneType]}
+                                  checked={
+                                    filterBy.tunes.type[tuneType.toLowerCase()]
+                                  }
                                   onChange={handleCheckboxClick(
                                     "tunes",
                                     "type",
@@ -1401,7 +1407,9 @@ const User = () => {
                                 <FilterCheckbox
                                   key={tuneType}
                                   label={tuneType}
-                                  checked={filterBy.sets.type[tuneType]}
+                                  checked={
+                                    filterBy.sets.type[tuneType.toLowerCase()]
+                                  }
                                   onChange={handleCheckboxClick(
                                     "sets",
                                     "type",
@@ -1439,6 +1447,7 @@ const User = () => {
                     dataFetch={triggerDataFetch}
                     goTo={goTo}
                     itemMemory={updateItemMemory}
+                    allTunes={tunes}
                   ></DisplaySet>
                 ))}
             </div>

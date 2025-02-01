@@ -95,7 +95,9 @@ const UpdateTune = ({ type, itemId, tune, dataFetch }) => {
     const formData = new FormData();
     formData.append("tuneName", tuneName);
     formData.append("tuneType", tuneType);
-    formData.append("tuneKey", JSON.stringify(tuneKey));
+    tuneKey.forEach((key, index) => {
+      formData.append(`tuneKey[${index}]`, key);
+    });
     formData.append("author", author);
     formData.append("comments", comments);
     formData.append("fileCommands", JSON.stringify(fileCommands));

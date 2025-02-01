@@ -64,19 +64,7 @@ const SortableItem = ({ tune, onRemove }) => {
   );
 };
 
-const UpdateSet = ({
-  type,
-  itemId,
-  set,
-  dataFetch,
-  userTunes,
-}: {
-  type: string;
-  itemId: string;
-  set: any;
-  dataFetch: () => void;
-  userTunes: Array<{ tuneId: string; tuneName: string }>;
-}) => {
+const UpdateSet = ({ type, itemId, set, dataFetch, userTunes, allTunes }) => {
   const [openModal, setOpenModal] = useState(false);
   const [setName, setSetName] = useState(set.setName);
   const [links, setLinks] = useState<string[]>(set.links || []);
@@ -87,9 +75,9 @@ const UpdateSet = ({
   const [fileCommands, setFileCommands] = useState<string[]>(
     Array(set.recordingRef?.length || 0).fill("keep")
   );
-  const [tunes, setTunes] = useState(set.tunes || []);
+  const [tunes, setTunes] = useState(userTunes || []);
   const [tuneSearch, setTuneSearch] = useState("");
-  const [filteredTunes, setFilteredTunes] = useState(userTunes);
+  const [filteredTunes, setFilteredTunes] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
 
   const sensors = useSensors(
@@ -108,10 +96,8 @@ const UpdateSet = ({
     setComments(set.creatorComments || "");
     setFileURLs(set.recordingRef || []);
     setFileCommands(Array(set.recordingRef?.length || 0).fill("keep"));
-    setTunes(set.tunes || []);
+    setTunes(userTunes || []);
   }
-
-  // ... Similar file handling methods as UpdateTune ...
 
   const handleUpdateSet = async () => {
     const formData = new FormData();
@@ -152,8 +138,8 @@ const UpdateSet = ({
     setShowDropdown(true);
     const query = searchValue.toLowerCase();
 
-    // Filter from userTunes instead of a separate tunes array
-    const availableTunes = userTunes.filter(
+    // Filter from allTunes instead of a separate tunes array
+    const availableTunes = allTunes.filter(
       (tune) => !tunes.some((addedTune) => addedTune.tuneId === tune.tuneId)
     );
 
