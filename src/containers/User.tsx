@@ -449,6 +449,7 @@ const User = () => {
       setSearch((prev) => ({ ...prev, sets: "" }));
       resetFilters("sessions");
       setSearch((prev) => ({ ...prev, sessions: "" }));
+      setTimeout(() => {}, 250);
     }
 
     setSortBy(() => ({
