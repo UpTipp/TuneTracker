@@ -620,15 +620,15 @@ const User = () => {
       case "lastPracticed":
         return sorted.sort(
           (a, b) =>
-            new Date(b.lastPractice).getTime() -
-            new Date(a.lastPractice).getTime()
+            new Date(b.lastPractice || 0).getTime() -
+            new Date(a.lastPractice || 0).getTime()
         );
       case "leastPracticed":
         return sorted
           .sort(
             (a, b) =>
-              new Date(b.lastPractice).getTime() -
-              new Date(a.lastPractice).getTime()
+              new Date(b.lastPractice || 0).getTime() -
+              new Date(a.lastPractice || 0).getTime()
           )
           .reverse();
       default:
@@ -645,6 +645,24 @@ const User = () => {
       if (filter.timeframe.all && filter.type.all) return items;
 
       return items.filter((item) => {
+        // If lastPractice is missing, treat it as unpracticed
+        if (!item.lastPractice) {
+          if (!filter.timeframe.all && !filter.timeframe.unpracticed) {
+            return false;
+          }
+          // still check type, if tunes/sets
+          if (type === "tunes") {
+            const typeMatch =
+              filter.type.all ||
+              Object.entries(filter.type)
+                .filter(([key, value]) => key !== "all" && value)
+                .some(
+                  ([key]) => item.tuneType?.toLowerCase() === key.toLowerCase()
+                );
+            return typeMatch;
+          }
+        }
+
         // Check timeframe
         const timeframeMatch =
           filter.timeframe.all ||
@@ -697,6 +715,26 @@ const User = () => {
       }
 
       return items.filter((set) => {
+        // If lastPractice is missing, treat it as unpracticed
+        if (!set.lastPractice) {
+          if (!filter.timeframe.all && !filter.timeframe.unpracticed) {
+            return false;
+          }
+          // still check type, if tunes/sets
+          if (type === "sets") {
+            const typeMatch =
+              filter.type.all ||
+              Object.entries(filter.type)
+                .filter(([key, value]) => key !== "all" && value)
+                .some(([key]) =>
+                  set.tuneTypes
+                    ?.map((t: string) => t.toLowerCase())
+                    .includes(key)
+                );
+            return typeMatch;
+          }
+        }
+
         // Check timeframe
         const timeframeMatch =
           filter.timeframe.all ||

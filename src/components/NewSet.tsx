@@ -49,7 +49,6 @@ const SortableItem = ({ tune, onRemove }) => {
 
 const NewSet = ({ dataFetch, userTunes, goTo }) => {
   const [openModal, setOpenModal] = useState(false);
-  const [selectedTunes, setSelectedTunes] = useState([]);
 
   // Inputs
   const [setName, setSetName] = useState("");
@@ -176,15 +175,13 @@ const NewSet = ({ dataFetch, userTunes, goTo }) => {
 
       const result = await response.json();
       console.log("Success:", result);
-      setTimeout(() => {
-        dataFetch();
-      }, 1000);
+      await dataFetch();
       setOpenModal(false);
       onCloseModal();
 
       let setId = result.setId;
       setTimeout(() => {
-        goTo("set", setId);
+        goTo("set", setId, false); // do not reset filters
       }, 1000);
     } catch (error) {
       console.error("Error:", error);
@@ -197,7 +194,7 @@ const NewSet = ({ dataFetch, userTunes, goTo }) => {
   };
 
   function handleTuneCreated(newTune) {
-    setSelectedTunes((prev) => [...prev, newTune]);
+    addTune({ tuneId: newTune.tuneId, tuneName: newTune.tuneName });
   }
 
   return (

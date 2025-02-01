@@ -12,7 +12,8 @@ const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
         echoCancellation: false,
         noiseSuppression: false,
         autoGainControl: false,
-        sampleRate: 48000,
+        sampleRate: 96000,
+        channelCount: 2,
       },
       onStop: async (blobUrl, blob) => {
         const file = new File([blob], "recording.mp3", { type: "audio/mp3" });

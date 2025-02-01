@@ -16,7 +16,7 @@ import { TUNE_TYPES, TUNE_KEYS } from "../shared/TuneOptions";
 interface NewTuneProps {
   onTuneCreated?: (tune: any) => void;
   dataFetch: () => void;
-  goTo: (page: string, id: string) => void;
+  goTo: (page: string, id: string, resetFiltered?: boolean) => void;
 }
 
 const NewTune = ({
@@ -113,7 +113,7 @@ const NewTune = ({
       if (onTuneCreated === undefined) {
         let tuneId = result.tuneId;
         setTimeout(() => {
-          goTo("tune", tuneId);
+          goTo("tune", tuneId, false); // do not reset filters
         }, 1000);
       } else {
         onTuneCreated(result);
