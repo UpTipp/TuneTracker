@@ -349,6 +349,7 @@ const User = () => {
   });
   const [search, setSearch] = useState({ tunes: "", sets: "", sessions: "" });
   const [selectedTuneType, setSelectedTuneType] = useState<string>("");
+  const [filterKey, setFilterKey] = useState(0); // Add state for filter key
 
   // Use the custom hook
   const { userData, tunes, sets, sessions, triggerDataFetch } = useUserData(id);
@@ -834,6 +835,7 @@ const User = () => {
         };
       }
     });
+    setFilterKey((prevKey) => prevKey + 1); // Increment filter key to force re-render
   }
 
   const handleCheckboxClick = (
@@ -921,6 +923,7 @@ const User = () => {
         };
       }
     });
+    setFilterKey((prevKey) => prevKey + 1); // Increment filter key to force re-render
   };
 
   const searchItems = (items: any[], type: string, searchTerm: string) => {
@@ -1207,6 +1210,7 @@ const User = () => {
                 .slice((currentPage - 1) * 21, currentPage * 21)
                 .map((tune) => (
                   <DisplayTune
+                    key={`${tune.tuneId}-${filterKey}`} // Add key to force re-render
                     tune={tune}
                     userId={id}
                     dataFetch={triggerDataFetch}
@@ -1442,6 +1446,7 @@ const User = () => {
                 .slice((currentPage - 1) * 21, currentPage * 21)
                 .map((set) => (
                   <DisplaySet
+                    key={`${set.setId}-${filterKey}`} // Add key to force re-render
                     set={set}
                     userId={id}
                     dataFetch={triggerDataFetch}
