@@ -425,9 +425,11 @@ const User = () => {
     const element = document.getElementById(elementId);
     if (element) {
       element.classList.add("border-green-500");
+      element.classList.add("hover:border-green-800");
       setTimeout(() => {
         element.classList.remove("border-green-500");
-      }, 3000);
+        element.classList.remove("hover:border-green-800");
+      }, 5000); // Highlight for 5 seconds
     }
   };
 
@@ -438,11 +440,17 @@ const User = () => {
     });
   };
 
-  function goTo(type: string, itemId: string) {
-    // Reset filters and sort
-    resetFilters("tunes");
-    resetFilters("sets");
-    resetFilters("sessions");
+  function goTo(type: string, itemId: string, resetFiltered: boolean = true) {
+    if (resetFiltered) {
+      // Reset filters and sort
+      resetFilters("tunes");
+      setSearch((prev) => ({ ...prev, tunes: "" }));
+      resetFilters("sets");
+      setSearch((prev) => ({ ...prev, sets: "" }));
+      resetFilters("sessions");
+      setSearch((prev) => ({ ...prev, sessions: "" }));
+    }
+
     setSortBy(() => ({
       tunes: "name",
       sets: "name",
@@ -530,13 +538,13 @@ const User = () => {
     if (oldestItem) {
       switch (type) {
         case "tune":
-          goTo(type, oldestItem.tuneId);
+          goTo(type, oldestItem.tuneId, false);
           break;
         case "set":
-          goTo(type, oldestItem.setId);
+          goTo(type, oldestItem.setId, false);
           break;
         case "session":
-          goTo(type, oldestItem.sessionId);
+          goTo(type, oldestItem.sessionId, false);
           break;
       }
     }
@@ -555,13 +563,13 @@ const User = () => {
 
     switch (type) {
       case "tune":
-        goTo(type, randomItem.tuneId);
+        goTo(type, randomItem.tuneId, false);
         break;
       case "set":
-        goTo(type, randomItem.setId);
+        goTo(type, randomItem.setId, false);
         break;
       case "session":
-        goTo(type, randomItem.sessionId);
+        goTo(type, randomItem.sessionId, false);
         break;
     }
   };

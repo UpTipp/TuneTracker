@@ -304,7 +304,6 @@ const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory, allTunes }) => {
                       )}
                     </>
                   ))}
-                  {set.tuneIds.length > 2 && <p className="mr-1">, ...</p>}
                 </div>
                 <div className="flex justify-normal flex-wrap non-clickable">
                   <p className="text-sm text-green-500 mr-1">Sessions:</p>
@@ -321,7 +320,6 @@ const DisplaySet = ({ set, userId, dataFetch, goTo, itemMemory, allTunes }) => {
                       )}
                     </>
                   ))}
-                  {set.sessionIds.length > 2 && <p className="mr-1">, ...</p>}
                 </div>
               </div>
             </div>

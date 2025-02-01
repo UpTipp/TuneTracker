@@ -200,7 +200,13 @@ const UpdateSet = ({ type, itemId, set, dataFetch, userTunes, allTunes }) => {
       <Button className="bg-blue-400" onClick={() => setOpenModal(true)}>
         Update {String(type).charAt(0).toUpperCase() + String(type).slice(1)}
       </Button>
-      <Modal show={openModal} size="xl" onClose={onCloseModal} popup>
+      <Modal
+        show={openModal}
+        size="xl"
+        onClose={onCloseModal}
+        className="non-clickable"
+        popup
+      >
         <Modal.Header />
         <Modal.Body>
           <div className="space-y-6">
