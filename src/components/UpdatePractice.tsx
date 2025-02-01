@@ -1,7 +1,7 @@
 import { Button } from "flowbite-react";
 
 const UpdatePractice = ({ type, id, userId, dataFetch }) => {
-  const handlePracticeNow = () => {
+  const handlePracticeNow = async () => {
     fetch("/api/users/" + userId + "/" + type, {
       method: "POST",
       credentials: "include",
@@ -11,8 +11,8 @@ const UpdatePractice = ({ type, id, userId, dataFetch }) => {
       body: JSON.stringify({ id: id }),
     }).then((response) => {
       if (response.ok) {
-        setTimeout(() => {
-          dataFetch();
+        setTimeout(async () => {
+          await dataFetch();
         }, 1000);
       }
     });

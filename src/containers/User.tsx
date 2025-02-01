@@ -422,13 +422,20 @@ const User = () => {
   };
 
   const highlightElement = (elementId: string) => {
+    console.log("Highlighting element:", elementId);
     const element = document.getElementById(elementId);
     if (element) {
+      console.log("Element found:", element);
       element.classList.add("border-green-500");
       element.classList.add("hover:border-green-800");
+      console.log("Element classList:", element.classList);
+      console.log("Element style:", element.style);
+      console.log("Element highlighted!");
       setTimeout(() => {
         element.classList.remove("border-green-500");
         element.classList.remove("hover:border-green-800");
+        console.log("Element unhighlighted!");
+        console.log("Element style:", element.style);
       }, 5000); // Highlight for 5 seconds
     }
   };
