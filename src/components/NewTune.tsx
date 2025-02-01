@@ -106,9 +106,7 @@ const NewTune = ({
 
       const result = await response.json();
       console.log("Success:", result);
-      setTimeout(() => {
-        dataFetch();
-      }, 1000);
+      await dataFetch();
       setOpenModal(false);
       onCloseModal();
 

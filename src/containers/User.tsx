@@ -456,7 +456,6 @@ const User = () => {
       setSearch((prev) => ({ ...prev, sets: "" }));
       resetFilters("sessions");
       setSearch((prev) => ({ ...prev, sessions: "" }));
-      setTimeout(() => {}, 250);
     }
 
     setSortBy(() => ({
@@ -482,8 +481,10 @@ const User = () => {
         document
           .getElementById(elementId)
           ?.scrollIntoView({ behavior: "smooth" });
-        highlightElement(elementId);
         updateUrl(type, itemId);
+        setTimeout(() => {
+          highlightElement(elementId);
+        }, 500);
       }
     } else if (type === "set") {
       tabsRef.current?.setActiveTab(1);
@@ -502,8 +503,10 @@ const User = () => {
         document
           .getElementById(elementId)
           ?.scrollIntoView({ behavior: "smooth" });
-        highlightElement(elementId);
         updateUrl(type, itemId);
+        setTimeout(() => {
+          highlightElement(elementId);
+        }, 500);
       }
     } else if (type === "session") {
       tabsRef.current?.setActiveTab(2);
@@ -522,8 +525,10 @@ const User = () => {
         document
           .getElementById(elementId)
           ?.scrollIntoView({ behavior: "smooth" });
-        highlightElement(elementId);
         updateUrl(type, itemId);
+        setTimeout(() => {
+          highlightElement(elementId);
+        }, 500);
       }
     }
   }
