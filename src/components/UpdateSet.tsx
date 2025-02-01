@@ -75,7 +75,9 @@ const UpdateSet = ({ type, itemId, set, dataFetch, userTunes, allTunes }) => {
   const [fileCommands, setFileCommands] = useState<string[]>(
     Array(set.recordingRef?.length || 0).fill("keep")
   );
-  const [tunes, setTunes] = useState(userTunes || []);
+  const [tunes, setTunes] = useState<{ tuneId: string; tuneName: string }[]>(
+    []
+  );
   const [tuneSearch, setTuneSearch] = useState("");
   const [filteredTunes, setFilteredTunes] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -87,6 +89,18 @@ const UpdateSet = ({ type, itemId, set, dataFetch, userTunes, allTunes }) => {
     })
   );
 
+  useEffect(() => {
+    // Fill tunes state with the existing set tunes
+    if (set.tunes) {
+      setTunes(set.tunes);
+    }
+  }, [set]);
+
+  useEffect(() => {
+    // Default to searching all user tunes
+    setFilteredTunes(allTunes);
+  }, [allTunes]);
+
   function onCloseModal() {
     setOpenModal(false);
     setSetName(set.setName);
@@ -96,7 +110,7 @@ const UpdateSet = ({ type, itemId, set, dataFetch, userTunes, allTunes }) => {
     setComments(set.creatorComments || "");
     setFileURLs(set.recordingRef || []);
     setFileCommands(Array(set.recordingRef?.length || 0).fill("keep"));
-    setTunes(userTunes || []);
+    setTunes(tunes || []);
   }
 
   const handleUpdateSet = async () => {
@@ -159,15 +173,15 @@ const UpdateSet = ({ type, itemId, set, dataFetch, userTunes, allTunes }) => {
     }, 200);
   };
 
-  const addTune = (tune: { tuneId: string; tuneName: string }) => {
-    setTunes([...tunes, tune]);
+  function addTune(tune: { tuneId: string; tuneName: string }) {
+    setTunes((prev) => [...prev, tune]);
     setTuneSearch("");
     setFilteredTunes([]);
-  };
+  }
 
-  const removeTune = (tuneId: string) => {
-    setTunes(tunes.filter((tune) => tune.tuneId !== tuneId));
-  };
+  function removeTune(tuneId: string) {
+    setTunes((prev) => prev.filter((t) => t.tuneId !== tuneId));
+  }
 
   const handleDragEnd = (event) => {
     const { active, over } = event;

@@ -12,7 +12,7 @@ const AudioRecorder = ({ onRecordingComplete }: AudioRecorderProps) => {
         echoCancellation: false,
         noiseSuppression: false,
         autoGainControl: false,
-        sampleRate: 96000,
+        // sampleRate: 96000, // remove or comment out
         channelCount: 2,
       },
       onStop: async (blobUrl, blob) => {
